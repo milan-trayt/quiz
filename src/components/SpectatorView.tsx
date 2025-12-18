@@ -243,9 +243,17 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
     const interval = setInterval(() => {
       const remaining = Math.max(0, Math.floor((new Date(quiz.timerEndsAt!).getTime() - Date.now()) / 1000));
       setTimeLeft(remaining);
+      if (remaining === 0 && quiz.phase === 'showing_result' && quiz.round === 'domain') {
+        console.log('Timer expired, calling handleShowingResultExpiry');
+        import('@/lib/handleShowingResult').then(({ handleShowingResultExpiry }) => {
+          handleShowingResultExpiry(quiz.id).then(() => {
+            console.log('handleShowingResultExpiry completed');
+          });
+        });
+      }
     }, 100);
     return () => clearInterval(interval);
-  }, [quiz.timerEndsAt]);
+  }, [quiz.timerEndsAt, quiz.phase, quiz.round, quiz.id]);
 
   const currentTeam = quiz.teams.find(t => t.id === quiz.currentTeamId);
   const currentDomain = quiz.domains.find(d => d.id === quiz.selectedDomainId);

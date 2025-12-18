@@ -1,13 +1,29 @@
 'use client';
 
 import { Monitor, Users, Play, Pause, RotateCcw, Trophy, Settings, Eye, BookOpen, Zap, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createTeam, createDomain, createQuestion, createBuzzerQuestion, startDomainRound, startBuzzerRound, resetQuiz, deleteTeam, deleteDomain, deleteQuestion, deleteBuzzerQuestion, updateTeam, updateDomain, updateQuestion, updateBuzzerQuestion, disconnectTeamCaptain } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
 
 export default function HostDashboard({ quiz }: { quiz: any }) {
   useSocket(quiz.id);
+  
+  useEffect(() => {
+    if (!quiz.timerEndsAt) return;
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((new Date(quiz.timerEndsAt).getTime() - Date.now()) / 1000));
+      if (remaining === 0 && quiz.phase === 'showing_result' && quiz.round === 'domain') {
+        console.log('Timer expired, calling handleShowingResultExpiry');
+        import('@/lib/handleShowingResult').then(({ handleShowingResultExpiry }) => {
+          handleShowingResultExpiry(quiz.id).then(() => {
+            console.log('handleShowingResultExpiry completed');
+          });
+        });
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [quiz.timerEndsAt, quiz.phase, quiz.round, quiz.id]);
   const [teamName, setTeamName] = useState('');
   const [domainName, setDomainName] = useState('');
   const [questionData, setQuestionData] = useState({ text: '', answer: '', options: ['', '', '', ''], correctIndex: -1 });
