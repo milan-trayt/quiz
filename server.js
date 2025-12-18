@@ -6,7 +6,7 @@ const { Server } = require('socket.io');
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';
 const port = 3000;
-const app = next({ dev });
+const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
@@ -31,5 +31,7 @@ app.prepare().then(() => {
   server.listen(port, hostname, (err) => {
     if (err) throw err;
     console.log(`> Ready on http://${hostname}:${port}`);
+    console.log(`> Mode: ${dev ? 'development' : 'production'}`);
+    console.log(`> Socket.IO enabled on path: /api/socket`);
   });
 });
