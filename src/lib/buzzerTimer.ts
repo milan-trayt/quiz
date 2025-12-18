@@ -4,8 +4,8 @@ import { prisma } from './db';
 import { revalidatePath } from 'next/cache';
 
 function emitUpdate(quizId: string) {
-  if (global.io) {
-    global.io.to(`quiz-${quizId}`).emit('quiz-update');
+  if ((global as any).io) {
+    (global as any).io.to(`quiz-${quizId}`).emit('quiz-update');
   }
 }
 
