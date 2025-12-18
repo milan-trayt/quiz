@@ -184,18 +184,7 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
     }
   };
 
-  const handleCreateAndJoin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const teamResult = await createTeam(quiz.id, newTeamName);
-    if (teamResult.success) {
-      const joinResult = await joinTeam(quiz.id, teamResult.teamId, playerName);
-      if (joinResult.success) {
-        localStorage.setItem('teamId', teamResult.teamId);
-        setSelectedTeam(teamResult.teamId);
-        setJoined(true);
-      }
-    }
-  };
+
 
   if (!joined) {
     return (
