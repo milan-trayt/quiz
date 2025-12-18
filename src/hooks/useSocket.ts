@@ -13,16 +13,21 @@ export function useSocket(quizId: string) {
     if (!socket) {
       const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
       socket = io(socketUrl);
+      console.log('Socket initialized:', socketUrl);
     }
 
     socket.emit('join-quiz', quizId);
+    console.log('Joined quiz:', quizId);
 
-    socket.on('quiz-update', () => {
+    const handleUpdate = () => {
+      console.log('Received quiz-update, refreshing...');
       router.refresh();
-    });
+    };
+
+    socket.on('quiz-update', handleUpdate);
 
     return () => {
-      socket?.off('quiz-update');
+      socket?.off('quiz-update', handleUpdate);
     };
   }, [quizId, router]);
 
