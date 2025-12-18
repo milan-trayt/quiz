@@ -108,11 +108,22 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
   };
 
   useEffect(() => {
-    const socketInstance = io({ path: '/api/socket' });
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+    const socketInstance = io(socketUrl);
+    console.log('Spectator socket initialized:', socketUrl);
+    
     socketInstance.emit('join-quiz', quiz.id);
-    socketInstance.on('quiz-update', () => router.refresh());
+    console.log('Spectator joined quiz:', quiz.id);
+    
+    const handleUpdate = () => {
+      console.log('Spectator received quiz-update, refreshing...');
+      router.refresh();
+    };
+    
+    socketInstance.on('quiz-update', handleUpdate);
+    
     return () => {
-      socketInstance.emit('leave-quiz', quiz.id);
+      socketInstance.off('quiz-update', handleUpdate);
       socketInstance.disconnect();
     };
   }, [quiz.id, router]);

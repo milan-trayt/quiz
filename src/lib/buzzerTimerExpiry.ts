@@ -3,9 +3,15 @@
 import { prisma } from './db';
 import { revalidatePath } from 'next/cache';
 
-function emitUpdate(quizId: string) {
-  if ((global as any).io) {
-    (global as any).io.to(`quiz-${quizId}`).emit('quiz-update');
+async function emitUpdate(quizId: string) {
+  try {
+    await fetch('http://localhost:4000/emit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quizId, event: 'quiz-update', data: {} })
+    });
+  } catch (error) {
+    console.error('Failed to emit update:', error);
   }
 }
 
