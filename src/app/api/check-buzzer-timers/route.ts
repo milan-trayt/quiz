@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleTimerExpiry } from '@/lib/actions';
+import { checkBuzzerTimers } from '@/lib/checkBuzzerTimers';
 
 export async function POST(request: NextRequest) {
   const { quizId } = await request.json();
-  const result = await handleTimerExpiry(quizId);
-  return NextResponse.json(result);
+  await checkBuzzerTimers(quizId);
+  return NextResponse.json({ success: true });
 }

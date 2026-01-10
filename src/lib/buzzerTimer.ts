@@ -17,7 +17,7 @@ async function emitUpdate(quizId: string) {
 
 export async function handleBuzzerTimerExpiry(quizId: string) {
   const quiz = await prisma.quiz.findUnique({ where: { id: quizId } });
-  if (!quiz || quiz.phase !== 'showing_answer') return;
+  if (!quiz || quiz.phase !== 'showing_answer') return { success: false };
   
   const nextQuestion = await prisma.buzzerQuestion.findFirst({
     where: { quizId, isAnswered: false },
@@ -31,11 +31,15 @@ export async function handleBuzzerTimerExpiry(quizId: string) {
       currentQuestionId: nextQuestion?.id || null,
       buzzSequence: [],
       currentTeamId: null,
-      timerEndsAt: nextQuestion ? new Date(Date.now() + 10000) : null
+      timerEndsAt: nextQuestion ? new Date(Date.now() + 10000) : null,
+      pendingBuzzerAnswers: {},
+      buzzTimers: {},
+      lastRoundResults: {}
     },
   });
   
   revalidatePath(`/quiz/${quizId}/host`);
   revalidatePath(`/quiz/${quizId}/team`);
   emitUpdate(quizId);
+  return { success: true };
 }

@@ -90,4 +90,5 @@ model Question {
   selectedBy      String?
   correctAnswer   String?
   optionsViewed   Boolean  @default(false)
+  optionsDefault  Boolean  @default(false)
 }

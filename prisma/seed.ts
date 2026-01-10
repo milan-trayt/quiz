@@ -47,9 +47,10 @@ async function main() {
           },
           {
             number: 3,
-            text: 'What is the default shell in most Linux distributions?',
+            text: 'Which of the following is the default shell in most Linux distributions?',
             answer: 'bash',
             options: ['bash', 'zsh', 'sh', 'fish'],
+            optionsDefault: true,
           },
           {
             number: 4,
@@ -77,9 +78,10 @@ async function main() {
         create: [
           {
             number: 1,
-            text: 'Which AWS service provides object storage?',
+            text: 'Which of the following AWS services provides object storage?',
             answer: 'S3',
             options: ['S3', 'EBS', 'EFS', 'Glacier'],
+            optionsDefault: true,
           },
           {
             number: 2,
@@ -101,9 +103,10 @@ async function main() {
           },
           {
             number: 5,
-            text: 'Which cloud provider offers Azure DevOps?',
+            text: 'Which of the following cloud providers offers Azure DevOps?',
             answer: 'Microsoft',
             options: ['Microsoft', 'Amazon', 'Google', 'IBM'],
+            optionsDefault: true,
           },
         ],
       },
@@ -173,9 +176,10 @@ async function main() {
           },
           {
             number: 3,
-            text: 'Which file format is commonly used for Docker configuration?',
+            text: 'Which of the following file formats is commonly used for Docker configuration?',
             answer: 'Dockerfile',
             options: ['Dockerfile', 'docker.json', 'docker.xml', 'docker.cfg'],
+            optionsDefault: true,
           },
           {
             number: 4,
@@ -215,9 +219,10 @@ async function main() {
           },
           {
             number: 3,
-            text: 'What does API stand for?',
+            text: 'Which of the following does API stand for?',
             answer: 'Application Programming Interface',
             options: ['Application Programming Interface', 'Advanced Programming Interface', 'Automated Program Integration', 'Application Process Integration'],
+            optionsDefault: true,
           },
           {
             number: 4,
@@ -401,7 +406,7 @@ async function main() {
   console.log(`\n📋 Quiz ID: ${quiz.id}`);
   console.log(`👥 Teams: ${teams.length}`);
   console.log(`📚 Domains: 5`);
-  console.log(`❓ Domain Questions: 25 (5 per domain)`);
+  console.log(`❓ Domain Questions: 25 (5 per domain, 4 multiple choice)`);
   console.log(`⚡ Buzzer Questions: ${buzzerQuestions.length}`);
 }
 

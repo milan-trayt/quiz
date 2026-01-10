@@ -138,7 +138,7 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
     if (initialQuiz.round === 'domain' && initialQuiz.phase === 'selecting_domain') {
       const team = initialQuiz.teams.find(t => t.id === initialQuiz.currentTeamId);
       if (team && prevQuiz.phase !== 'selecting_domain') {
-        speakText(`Team ${team.name} is selecting a domain`);
+        speakText(`${team.name} selecting domain`);
       }
     }
 
@@ -147,7 +147,7 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
       const domain = initialQuiz.domains.find(d => d.id === initialQuiz.selectedDomainId);
       const team = initialQuiz.teams.find(t => t.id === initialQuiz.currentTeamId);
       if (domain && team) {
-        speakText(`Team ${team.name} selected ${domain.name} domain. Team ${team.name}, please select a question`);
+        speakText(`${team.name} selected ${domain.name}. Select a question`);
       }
     }
 
@@ -155,17 +155,17 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
     if (initialQuiz.round === 'domain' && initialQuiz.phase === 'selecting_question' && prevQuiz.phase === 'showing_result') {
       const team = initialQuiz.teams.find(t => t.id === initialQuiz.currentTeamId);
       if (team) {
-        speakText(`Team ${team.name}, please select a question`);
+        speakText(`${team.name}, select a question`);
       }
     }
 
     // Question selected
-    if (initialQuiz.round === 'domain' && initialQuiz.phase === 'answering' && prevQuiz.phase === 'selecting_question') {
+    if (initialQuiz.round === 'domain' && (initialQuiz.phase === 'answering' || initialQuiz.phase === 'answering_with_options') && prevQuiz.phase === 'selecting_question') {
       const domain = initialQuiz.domains.find(d => d.id === initialQuiz.selectedDomainId);
       const question = domain?.questions.find(q => q.id === initialQuiz.currentQuestionId);
       const team = initialQuiz.teams.find(t => t.id === initialQuiz.currentTeamId);
       if (question && team) {
-        speakText(`Team ${team.name} selected question number ${question.number}. Good luck!`);
+        speakText(`${team.name} selected question ${question.number}`);
       }
     }
 
@@ -173,7 +173,7 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
     if (initialQuiz.round === 'domain' && initialQuiz.phase === 'answering_with_options' && prevQuiz.phase === 'answering') {
       const team = initialQuiz.teams.find(t => t.id === initialQuiz.currentTeamId);
       if (team) {
-        speakText(`Team ${team.name} has viewed the options`);
+        speakText(`${team.name} viewed options`);
       }
     }
 
@@ -183,9 +183,9 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
       if (team) {
         if (initialQuiz.lastDomainAnswer.isCorrect) {
           const withOptions = initialQuiz.lastDomainAnswer.withOptions ? 'with options' : 'without options';
-          speakText(`Correct answer by Team ${team.name} ${withOptions}! ${initialQuiz.lastDomainAnswer.points} points awarded`);
+          speakText(`Correct by ${team.name} ${withOptions}! ${initialQuiz.lastDomainAnswer.points} points`);
         } else {
-          speakText(`No one could answer the question`);
+          speakText(`No correct answer`);
         }
       }
     }
@@ -194,13 +194,13 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
     if (initialQuiz.round === 'domain' && initialQuiz.phase === 'answering' && prevQuiz.currentTeamId !== initialQuiz.currentTeamId && prevQuiz.phase === 'answering') {
       const team = initialQuiz.teams.find(t => t.id === initialQuiz.currentTeamId);
       if (team) {
-        speakText(`Question passed to Team ${team.name}`);
+        speakText(`Passed to ${team.name}`);
       }
     }
 
     // Buzzer round
     if (initialQuiz.round === 'buzzer' && initialQuiz.phase === 'buzzing' && prevQuiz.round !== 'buzzer') {
-      speakText('Buzzer round has started. Get ready to buzz in');
+      speakText('Buzzer round started');
     }
 
     // Team buzzed
@@ -208,7 +208,7 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
       const newTeamId = initialQuiz.buzzSequence[initialQuiz.buzzSequence.length - 1];
       const team = initialQuiz.teams.find(t => t.id === newTeamId);
       if (team) {
-        speakText(`Team ${team.name} buzzed in!`);
+        speakText(`${team.name} buzzed!`);
       }
     }
 
@@ -219,10 +219,10 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
       if (correctTeam) {
         const team = initialQuiz.teams.find(t => t.id === correctTeam[0]);
         if (team) {
-          speakText(`Correct answer by Team ${team.name}!`);
+          speakText(`Correct by ${team.name}!`);
         }
       } else {
-        speakText('No correct answers. Moving to next question');
+        speakText('No correct answers');
       }
     }
 
@@ -230,7 +230,7 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
     if (initialQuiz.phase === 'completed' && prevQuiz.phase !== 'completed') {
       const winner = [...initialQuiz.teams].sort((a, b) => b.score - a.score)[0];
       if (winner) {
-        speakText(`Quiz complete! Team ${winner.name} wins with ${winner.score} points! Congratulations!`);
+        speakText(`Quiz complete! ${winner.name} wins with ${winner.score} points!`);
       }
     }
   }, [initialQuiz, commentaryEnabled]);
@@ -326,21 +326,18 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
                     )}
                     <div className="flex justify-between items-center">
                       <div>
-                        <span className="text-white font-bold text-lg">
-                          {quiz.teams.find((t: Team) => t.id === quiz.lastDomainAnswer.teamId)?.name}
-                        </span>
-                        <span className={`ml-3 font-semibold ${
-                          quiz.lastDomainAnswer.isCorrect ? 'text-green-300' : 'text-red-300'
-                        }`}>
-                          {quiz.lastDomainAnswer.isCorrect ? <CheckCircle className="inline w-5 h-5 mr-1" /> : <XCircle className="inline w-5 h-5 mr-1" />}
-                          {quiz.lastDomainAnswer.isCorrect ? 'Correct' : 'Incorrect'}
-                        </span>
-                        {quiz.lastDomainAnswer.answer && (
-                          <span className="text-white/60 ml-2 text-sm">({quiz.lastDomainAnswer.answer})</span>
-                        )}
-                        {!quiz.lastDomainAnswer.isCorrect && quiz.lastDomainAnswer.correctAnswer && (
-                          <span className="text-green-300 ml-3 text-sm">
-                            Correct: {quiz.lastDomainAnswer.correctAnswer}
+                        {quiz.lastDomainAnswer.isCorrect ? (
+                          <>
+                            <span className="text-white font-bold text-lg">
+                              {quiz.teams.find((t: Team) => t.id === quiz.lastDomainAnswer.teamId)?.name}:
+                            </span>
+                            <span className="text-green-300 ml-2 font-semibold">
+                              {quiz.lastDomainAnswer.correctAnswer}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-green-300 font-semibold">
+                            Correct Answer: {quiz.lastDomainAnswer.correctAnswer}
                           </span>
                         )}
                       </div>
@@ -383,21 +380,18 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
                     )}
                     <div className="flex justify-between items-center">
                       <div>
-                        <span className="text-white font-bold text-lg">
-                          {quiz.teams.find((t: Team) => t.id === quiz.lastDomainAnswer.teamId)?.name}
-                        </span>
-                        <span className={`ml-3 font-semibold ${
-                          quiz.lastDomainAnswer.isCorrect ? 'text-green-300' : 'text-red-300'
-                        }`}>
-                          {quiz.lastDomainAnswer.isCorrect ? <CheckCircle className="inline w-5 h-5 mr-1" /> : <XCircle className="inline w-5 h-5 mr-1" />}
-                          {quiz.lastDomainAnswer.isCorrect ? 'Correct' : 'Incorrect'}
-                        </span>
-                        {quiz.lastDomainAnswer.answer && (
-                          <span className="text-white/60 ml-2 text-sm">({quiz.lastDomainAnswer.answer})</span>
-                        )}
-                        {!quiz.lastDomainAnswer.isCorrect && quiz.lastDomainAnswer.correctAnswer && (
-                          <span className="text-green-300 ml-3 text-sm">
-                            Correct: {quiz.lastDomainAnswer.correctAnswer}
+                        {quiz.lastDomainAnswer.isCorrect ? (
+                          <>
+                            <span className="text-white font-bold text-lg">
+                              {quiz.teams.find((t: Team) => t.id === quiz.lastDomainAnswer.teamId)?.name}:
+                            </span>
+                            <span className="text-green-300 ml-2 font-semibold">
+                              {quiz.lastDomainAnswer.correctAnswer}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-green-300 font-semibold">
+                            Correct Answer: {quiz.lastDomainAnswer.correctAnswer}
                           </span>
                         )}
                       </div>
@@ -464,7 +458,12 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
             {quiz.round === 'buzzer' && quiz.phase === 'buzzing' && currentBuzzerQuestion && (
               <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
                 <div className="bg-slate-900/30 rounded-xl p-6 mb-4">
-                  <div className="text-sm text-white/60 mb-2">Buzzer Question #{currentBuzzerQuestion.number}</div>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-sm text-white/60">Buzzer Question #{currentBuzzerQuestion.number}</div>
+                    <div className="text-sm text-white/60">
+                      {quiz.buzzerQuestions.filter((q: any) => !q.isAnswered).length} questions remaining
+                    </div>
+                  </div>
                   <div className="text-3xl text-white font-bold mb-4">{currentBuzzerQuestion.text}</div>
                 </div>
                 <div className="bg-orange-500/20 border-2 border-orange-400 rounded-xl p-6 text-center">
@@ -492,12 +491,35 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
             {quiz.round === 'buzzer' && quiz.phase === 'answering' && currentBuzzerQuestion && (
               <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
                 <div className="bg-slate-900/30 rounded-xl p-6 mb-4">
-                  <div className="text-sm text-white/60 mb-2">Buzzer Question #{currentBuzzerQuestion.number}</div>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-sm text-white/60">Buzzer Question #{currentBuzzerQuestion.number}</div>
+                    <div className="text-sm text-white/60">
+                      {quiz.buzzerQuestions.filter((q: any) => !q.isAnswered).length} questions remaining
+                    </div>
+                  </div>
                   <div className="text-3xl text-white font-bold mb-4">{currentBuzzerQuestion.text}</div>
                 </div>
                 <div className="bg-yellow-500/20 border-2 border-yellow-400 rounded-xl p-4 mb-4">
-                  <div className="text-yellow-400 font-bold text-2xl text-center">
-                    {currentTeam?.name} is answering...
+                  <div className="text-yellow-400 font-bold text-2xl text-center mb-4">
+                    Teams Answering
+                  </div>
+                  <div className="text-center">
+                    <div className="flex justify-center gap-3 flex-wrap">
+                      {quiz.buzzSequence.map((teamId, idx) => {
+                        const team = quiz.teams.find(t => t.id === teamId);
+                        return (
+                          <div 
+                            key={idx} 
+                            className="px-4 py-2 rounded-full font-bold text-lg bg-yellow-500 text-black animate-pulse"
+                          >
+                            {idx + 1}. {team?.name}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="text-white/60 text-sm mt-3">
+                      20 seconds each
+                    </div>
                   </div>
                 </div>
               </div>
@@ -541,41 +563,67 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
 
             {/* Showing Result */}
             {quiz.round === 'domain' && quiz.phase === 'showing_result' && quiz.lastDomainAnswer && quiz.lastDomainAnswer.questionCompleted && (
-              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-12 text-center border border-slate-700/50">
-                <div className={`p-8 rounded-xl border-2 ${
-                  quiz.lastDomainAnswer.isCorrect 
-                    ? 'bg-green-500/20 border-green-400' 
-                    : 'bg-red-500/20 border-red-400'
-                }`}>
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    {quiz.lastDomainAnswer.isCorrect ? <CheckCircle className="w-12 h-12 text-emerald-400" /> : <XCircle className="w-12 h-12 text-red-400" />}
+              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-12 border border-slate-700/50">
+                <div className="space-y-8">
+                  {/* Question */}
+                  <div className="text-center">
+                    <h2 className="text-4xl font-bold mb-6 text-white">Question</h2>
+                    <div className="text-3xl text-white/90 bg-blue-500/20 border border-blue-500 rounded-xl p-8">
+                      {quiz.lastDomainAnswer.questionText}
+                    </div>
                   </div>
-                  <h2 className="text-3xl font-bold text-white mb-4">
-                    {quiz.lastDomainAnswer.isCorrect ? 'Correct Answer!' : 'No one could answer'}
-                  </h2>
-                  {quiz.lastDomainAnswer.questionText && (
-                    <div className="text-white/80 text-lg mb-4 italic">"{quiz.lastDomainAnswer.questionText}"</div>
-                  )}
-                  <div className="text-2xl mb-3">
-                    <span className="text-white font-bold">
-                      {quiz.teams.find((t: Team) => t.id === quiz.lastDomainAnswer.teamId)?.name}
-                    </span>
-                    {quiz.lastDomainAnswer.answer && (
-                      <span className="text-white/60 ml-2">({quiz.lastDomainAnswer.answer})</span>
-                    )}
+
+                  {/* Correct Answer */}
+                  <div className="text-center">
+                    <h3 className="text-3xl font-bold mb-4 text-green-400">Correct Answer</h3>
+                    <div className="text-2xl text-green-300 bg-green-500/20 border border-green-500 rounded-xl p-6">
+                      {quiz.lastDomainAnswer.correctAnswer}
+                    </div>
                   </div>
-                  {!quiz.lastDomainAnswer.isCorrect && quiz.lastDomainAnswer.correctAnswer && (
-                    <div className="text-green-300 text-xl mb-3">
-                      Correct Answer: {quiz.lastDomainAnswer.correctAnswer}
+
+                  {/* All Team Answers */}
+                  {quiz.lastDomainAnswer.allAnswers && quiz.lastDomainAnswer.allAnswers.length > 0 && quiz.lastDomainAnswer.questionCompleted && (
+                    <div className="text-center">
+                      <h3 className="text-2xl font-bold mb-6 text-white">Team Answers</h3>
+                      <div className="space-y-3">
+                        {quiz.lastDomainAnswer.allAnswers.map((teamAnswer: any) => (
+                          <div 
+                            key={teamAnswer.teamId}
+                            className={`text-xl ${
+                              teamAnswer.isPassed
+                                ? 'text-red-300'
+                                : teamAnswer.isCorrect 
+                                  ? 'text-green-300' 
+                                  : 'text-red-300'
+                            }`}
+                          >
+                            <span className="font-bold">{teamAnswer.teamName}:</span>
+                            {teamAnswer.isPassed ? (
+                              <span className="ml-2">PASSED</span>
+                            ) : teamAnswer.isTimeout ? (
+                              <span className="ml-2 text-orange-400">TIMEOUT</span>
+                            ) : teamAnswer.answer ? (
+                              <span className="ml-2">"{teamAnswer.answer}"</span>
+                            ) : (
+                              <span className="ml-2">No answer</span>
+                            )}
+                            <span className="ml-3 text-lg opacity-75">
+                              ({teamAnswer.points > 0 ? '+' : ''}{teamAnswer.points} pts)
+                            </span>
+                            {!teamAnswer.wasTabActive && (
+                              <span className="ml-3 text-sm text-yellow-400">⚠ Tab inactive</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  <div className={`text-4xl font-bold ${
-                    quiz.lastDomainAnswer.isCorrect ? 'text-green-300' : 'text-red-300'
-                  }`}>
-                    {quiz.lastDomainAnswer.points > 0 ? '+' : ''}{quiz.lastDomainAnswer.points} pts
-                  </div>
+
+                  {/* Timer */}
                   {timeLeft !== null && timeLeft > 0 && (
-                    <div className="text-white/70 text-lg mt-4">Next in {timeLeft}s...</div>
+                    <div className="text-center text-white/70 text-xl">
+                      Next in {timeLeft}s...
+                    </div>
                   )}
                 </div>
               </div>

@@ -26,9 +26,12 @@ export async function handleBuzzerAnswerTimerExpiry(quizId: string) {
   const buzzIndex = quiz.buzzSequence.indexOf(teamId);
   const isFirstBuzzer = buzzIndex === 0;
   
-  // Deduct points for timeout
-  const points = isFirstBuzzer ? -5 : -3;
-  await prisma.team.update({ where: { id: teamId }, data: { score: { increment: points } } });
+  // Queue timeout penalty instead of applying directly to prevent double scoring
+  const pendingAnswers = (quiz.pendingBuzzerAnswers as any) || {};
+  if (!pendingAnswers[teamId]) {
+    const points = isFirstBuzzer ? -10 : -5;
+    pendingAnswers[teamId] = { answer: '', isCorrect: false, points, timeout: true };
+  }
   
   // Pass to next in buzz sequence
   const currentIndex = quiz.buzzSequence.indexOf(teamId);
@@ -38,23 +41,22 @@ export async function handleBuzzerAnswerTimerExpiry(quizId: string) {
     const timerEndsAt = new Date(Date.now() + 20000);
     await prisma.quiz.update({
       where: { id: quizId },
-      data: { currentTeamId: nextTeamId, phase: 'answering', timerEndsAt },
+      data: { 
+        currentTeamId: nextTeamId, 
+        phase: 'answering', 
+        timerEndsAt,
+        pendingBuzzerAnswers: pendingAnswers
+      },
     });
   } else {
-    // No more teams - show answer
-    await prisma.buzzerQuestion.update({ where: { id: question.id }, data: { isAnswered: true } });
-    const nextQuestion = await prisma.buzzerQuestion.findFirst({
-      where: { quizId, isAnswered: false },
-      orderBy: { number: 'asc' },
-    });
+    // No more teams - update state and let the system process answers
     await prisma.quiz.update({
       where: { id: quizId },
       data: { 
-        phase: nextQuestion ? 'showing_answer' : 'completed',
-        currentQuestionId: quiz.currentQuestionId,
-        buzzSequence: [],
+        phase: 'processing_answers',
+        pendingBuzzerAnswers: pendingAnswers,
         currentTeamId: null,
-        timerEndsAt: new Date(Date.now() + 20000)
+        timerEndsAt: null
       },
     });
   }

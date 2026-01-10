@@ -7,26 +7,27 @@ import { useRouter } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
 
 export default function HostDashboard({ quiz }: { quiz: any }) {
-  useSocket(quiz.id);
+  const { socket, isConnected, hasReconnected } = useSocket(quiz.id);
   
   useEffect(() => {
     if (!quiz.timerEndsAt) return;
     const interval = setInterval(() => {
       const remaining = Math.max(0, Math.floor((new Date(quiz.timerEndsAt).getTime() - Date.now()) / 1000));
-      if (remaining === 0 && quiz.phase === 'showing_result' && quiz.round === 'domain') {
-        console.log('Timer expired, calling API');
-        fetch('/api/timer-expiry', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ quizId: quiz.id })
-        }).then(() => console.log('Timer expiry handled'));
+      if (remaining === 0) {
+        if (quiz.phase === 'showing_result' && quiz.round === 'domain') {
+          fetch('/api/timer-expiry', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quizId: quiz.id })
+          });
+        }
       }
     }, 1000);
     return () => clearInterval(interval);
   }, [quiz.timerEndsAt, quiz.phase, quiz.round, quiz.id]);
   const [teamName, setTeamName] = useState('');
   const [domainName, setDomainName] = useState('');
-  const [questionData, setQuestionData] = useState({ text: '', answer: '', options: ['', '', '', ''], correctIndex: -1 });
+  const [questionData, setQuestionData] = useState({ text: '', answer: '', options: ['', '', '', ''], correctIndex: -1, optionsDefault: false });
   const [buzzerData, setBuzzerData] = useState({ text: '', answer: '', options: ['', '', '', ''], correctIndex: -1 });
   const [selectedDomain, setSelectedDomain] = useState('');
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
@@ -59,9 +60,10 @@ export default function HostDashboard({ quiz }: { quiz: any }) {
       selectedDomain,
       questionData.text,
       answer,
-      filteredOptions
+      filteredOptions,
+      questionData.optionsDefault
     );
-    setQuestionData({ text: '', answer: '', options: ['', '', '', ''], correctIndex: -1 });
+    setQuestionData({ text: '', answer: '', options: ['', '', '', ''], correctIndex: -1, optionsDefault: false });
     router.refresh();
   };
 
@@ -277,7 +279,10 @@ export default function HostDashboard({ quiz }: { quiz: any }) {
                     <div className="mt-2 space-y-1">
                       {domain.questions.map((q: any) => (
                         <div key={q.id} className="flex justify-between items-center text-xs bg-slate-900/30 rounded p-2">
-                          <span>Q{q.number}: {q.text.substring(0, 30)}...</span>
+                          <span>
+                            Q{q.number}: {q.text.substring(0, 30)}...
+                            {q.optionsDefault && <span className="ml-2 px-2 py-1 bg-blue-500/30 text-blue-300 rounded text-xs">MC</span>}
+                          </span>
                           <button
                             onClick={async () => {
                               await deleteQuestion(q.id);
@@ -345,6 +350,22 @@ export default function HostDashboard({ quiz }: { quiz: any }) {
                   />
                 </div>
               ))}
+            </div>
+            
+            <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <input
+                type="checkbox"
+                id="optionsDefault"
+                checked={questionData.optionsDefault}
+                onChange={(e) => setQuestionData({ ...questionData, optionsDefault: e.target.checked })}
+                className="w-5 h-5 text-blue-600"
+              />
+              <label htmlFor="optionsDefault" className="text-sm font-medium">
+                <span className="text-blue-300">Options enabled by default</span>
+                <div className="text-xs text-slate-400 mt-1">
+                  Multiple choice question: Shows options automatically, cannot be passed, +10 correct / -5 incorrect
+                </div>
+              </label>
             </div>
             <button type="submit" className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
               Add Question
@@ -428,8 +449,12 @@ export default function HostDashboard({ quiz }: { quiz: any }) {
           {quiz.status === 'active' && (quiz.round === 'domain' || quiz.round === 'buzzer') && (
             <button
               onClick={async () => {
-                const { pauseQuiz } = await import('@/lib/actions');
-                await pauseQuiz(quiz.id);
+                // Use direct import instead of dynamic import
+                const response = await fetch('/api/pause-quiz', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ quizId: quiz.id })
+                });
               }}
               className="py-4 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold text-lg"
             >
@@ -439,8 +464,12 @@ export default function HostDashboard({ quiz }: { quiz: any }) {
           {quiz.status === 'paused' && (quiz.round === 'domain' || quiz.round === 'buzzer') && (
             <button
               onClick={async () => {
-                const { resumeQuiz } = await import('@/lib/actions');
-                await resumeQuiz(quiz.id);
+                // Use direct import instead of dynamic import
+                const response = await fetch('/api/resume-quiz', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ quizId: quiz.id })
+                });
               }}
               className="py-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-lg"
             >

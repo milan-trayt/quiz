@@ -1,35 +1,71 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 
-let socket: Socket | null = null;
-
 export function useSocket(quizId: string) {
   const router = useRouter();
+  const [isConnected, setIsConnected] = useState(false);
+  const [hasReconnected, setHasReconnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const isInitialConnection = useRef(true);
 
   useEffect(() => {
-    if (!socket) {
-      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
-      socket = io(socketUrl);
-      console.log('Socket initialized:', socketUrl);
+    // Clean up existing socket if it exists
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
     }
 
-    socket.emit('join-quiz', quizId);
-    console.log('Joined quiz:', quizId);
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+    socketRef.current = io(socketUrl, {
+      forceNew: true, // Force new connection to avoid reusing
+      transports: ['websocket', 'polling']
+    });
+
+    const socket = socketRef.current;
+    console.log('Socket initialized:', socketUrl);
+
+    const handleConnect = () => {
+      console.log('Socket connected');
+      if (!isInitialConnection.current && !isConnected) {
+        // This is a reconnection
+        setHasReconnected(true);
+        console.log('Socket reconnected - refreshing state');
+        router.refresh();
+      }
+      isInitialConnection.current = false;
+      setIsConnected(true);
+    };
+
+    const handleDisconnect = () => {
+      console.log('Socket disconnected');
+      setIsConnected(false);
+    };
 
     const handleUpdate = () => {
       console.log('Received quiz-update, refreshing...');
       router.refresh();
     };
 
+    // Add listeners
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
     socket.on('quiz-update', handleUpdate);
 
-    return () => {
-      socket?.off('quiz-update', handleUpdate);
-    };
-  }, [quizId, router]);
+    // Join quiz room
+    socket.emit('join-quiz', quizId);
+    console.log('Joined quiz:', quizId);
 
-  return socket;
+    // Cleanup function
+    return () => {
+      console.log('Cleaning up socket connection');
+      socket.removeAllListeners();
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [quizId, router]); // Removed isConnected from dependencies to prevent loops
+
+  return { socket: socketRef.current, isConnected, hasReconnected };
 }
