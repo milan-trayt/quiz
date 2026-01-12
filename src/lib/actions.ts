@@ -591,6 +591,7 @@ export async function updateScore(teamId: string, points: number) {
 export async function selectDomain(quizId: string, domainId: string) {
   const quiz = await prisma.quiz.findUnique({ where: { id: quizId }, include: { teams: { orderBy: [{ sequence: 'asc' }, { id: 'asc' }] } } });
   const domainIndex = quiz?.domainIndex || 0;
+  const questionSelectorTeamId = quiz?.teams[domainIndex]?.id || null;
   
   await prisma.quiz.update({
     where: { id: quizId },
@@ -601,6 +602,7 @@ export async function selectDomain(quizId: string, domainId: string) {
       usedDomains: { push: domainId },
       questionSelectorIndex: domainIndex,
       answerTurnIndex: domainIndex,
+      currentTeamId: questionSelectorTeamId,
       lastDomainAnswer: { allAnswers: [] } // Reset answers for new domain
     },
   });
@@ -614,7 +616,7 @@ export async function selectQuestion(quizId: string, questionId: string, teamId:
   const quiz = await prisma.quiz.findUnique({ where: { id: quizId }, include: { teams: { orderBy: [{ sequence: 'asc' }, { id: 'asc' }] } } });
   const question = await prisma.question.findUnique({ where: { id: questionId } });
   const selectorIndex = quiz?.questionSelectorIndex || 0;
-  const expectedTeamId = quiz?.currentTeamId || quiz?.teams[selectorIndex]?.id;
+  const expectedTeamId = quiz?.teams[selectorIndex]?.id;
   
   console.log('[SELECT_QUESTION]', {
     questionSelectorIndex: quiz?.questionSelectorIndex,
@@ -732,8 +734,14 @@ export async function passQuestion(quizId: string, questionId: string, teamId: s
         data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 15000), questionsInDomain: newQuestionsInDomain },
       });
     } else {
-      const nextSelectorIndex = (quiz.questionSelectorIndex + 1) % teamCount;
-      await prisma.quiz.update({ where: { id: quizId }, data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 10000), questionsInDomain: newQuestionsInDomain, questionSelectorIndex: nextSelectorIndex, answerTurnIndex: nextSelectorIndex } });
+      await prisma.quiz.update({ 
+        where: { id: quizId }, 
+        data: { 
+          phase: 'showing_result', 
+          timerEndsAt: new Date(Date.now() + 10000), 
+          questionsInDomain: newQuestionsInDomain
+        } 
+      });
     }
   } else {
     // Pass to next team
@@ -909,11 +917,14 @@ export async function submitDomainAnswer(
         data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 15000), questionsInDomain: newQuestionsInDomain },
       });
     } else {
-      // Continue in same domain - show result first, update selector for next question
-      const nextSelectorIndex = (quiz.questionSelectorIndex + 1) % teamCount;
+      // Continue in same domain - show result first, don't update selector yet (will be done in timer expiry)
       await prisma.quiz.update({
         where: { id: quizId },
-        data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 10000), questionsInDomain: newQuestionsInDomain, questionSelectorIndex: nextSelectorIndex, answerTurnIndex: nextSelectorIndex },
+        data: { 
+          phase: 'showing_result', 
+          timerEndsAt: new Date(Date.now() + 10000), 
+          questionsInDomain: newQuestionsInDomain
+        },
       });
     }
   } else if (!withOptions && actuallyCorrect && !wasTabActive) {
@@ -955,10 +966,13 @@ export async function submitDomainAnswer(
         data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 15000), questionsInDomain: newQuestionsInDomain },
       });
     } else {
-      const nextSelectorIndex = (quiz.questionSelectorIndex + 1) % teamCount;
       await prisma.quiz.update({
         where: { id: quizId },
-        data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 10000), questionsInDomain: newQuestionsInDomain, questionSelectorIndex: nextSelectorIndex, answerTurnIndex: nextSelectorIndex },
+        data: { 
+          phase: 'showing_result', 
+          timerEndsAt: new Date(Date.now() + 10000), 
+          questionsInDomain: newQuestionsInDomain
+        },
       });
     }
   } else {
@@ -999,8 +1013,14 @@ export async function submitDomainAnswer(
           data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 15000), questionsInDomain: newQuestionsInDomain },
         });
       } else {
-        const nextSelectorIndex = (quiz.questionSelectorIndex + 1) % teamCount;
-        await prisma.quiz.update({ where: { id: quizId }, data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 10000), questionsInDomain: newQuestionsInDomain, questionSelectorIndex: nextSelectorIndex, answerTurnIndex: nextSelectorIndex } });
+        await prisma.quiz.update({ 
+          where: { id: quizId }, 
+          data: { 
+            phase: 'showing_result', 
+            timerEndsAt: new Date(Date.now() + 10000), 
+            questionsInDomain: newQuestionsInDomain
+          } 
+        });
       }
     }
   }
