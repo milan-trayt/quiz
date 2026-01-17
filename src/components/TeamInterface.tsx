@@ -253,17 +253,11 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
         const remaining = Math.max(0, Math.floor((new Date(quiz.timerEndsAt).getTime() - Date.now()) / 1000));
         setTimeLeft(remaining);
         
-        // Auto-pass when timer expires (domain round)
+        // Show toast when timer expires for current team
         if (remaining === 0 && isMyTurn && (quiz.phase === 'answering' || quiz.phase === 'answering_with_options') && quiz.round === 'domain') {
           setToast({
             message: 'Timeout! Question passed.',
             type: 'error'
-          });
-          // Let the server handle timer expiry through API endpoint
-          fetch('/api/timer-expiry', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quizId: quiz.id })
           });
         }
         
@@ -289,6 +283,20 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
       return () => clearInterval(interval);
     }
   }, [quiz.timerEndsAt, isMyTurn, quiz.phase, quiz.round, quiz.id]);
+
+  // Periodic check for domain round timer expiry (server-side) - works regardless of whose turn it is
+  useEffect(() => {
+    if (quiz.round === 'domain' && (quiz.phase === 'answering' || quiz.phase === 'answering_with_options')) {
+      const interval = setInterval(() => {
+        fetch('/api/check-domain-timers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quizId: quiz.id })
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [quiz.round, quiz.phase, quiz.id]);
 
   useEffect(() => {
     if (toast) {
@@ -383,26 +391,27 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
         {/* QUIZ COMPLETED */}
         {quiz.status === 'active' && quiz.phase === 'completed' && (
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-            <div className="text-center py-8 mb-6">
+            <div className="text-center py-12">
+              <div className="text-6xl mb-6">🎉</div>
               <h2 className="text-4xl font-bold mb-4">Quiz Completed!</h2>
-              <p className="text-slate-400 text-lg">Thank you for participating!</p>
+              <p className="text-slate-400 text-lg mb-4">Thank you for participating!</p>
+              <p className="text-purple-300 text-xl">📺 Check the main screen for final results</p>
             </div>
-            <h2 className="text-2xl font-bold mb-4 text-center">Final Standings</h2>
-            <div className="space-y-3">
-              {quiz.teams.sort((a: any, b: any) => b.score - a.score).map((t: any, i: number) => (
-                <div key={t.id} className={`flex justify-between items-center rounded-lg p-4 ${
-                  i === 0 ? 'bg-yellow-500/20 border-2 border-yellow-500' :
-                  i === 1 ? 'bg-gray-400/20 border-2 border-gray-400' :
-                  i === 2 ? 'bg-orange-500/20 border-2 border-orange-500' :
-                  'bg-slate-800/50'
-                }`}>
-                  <div className="flex items-center gap-4">
-                    <div className="text-4xl">{i === 0 ? '1st' : i === 1 ? '2nd' : i === 2 ? '3rd' : `${i + 1}.`}</div>
-                    <div className="font-bold text-xl">{t.name}</div>
-                  </div>
-                  <div className="text-2xl font-bold">{t.score}</div>
-                </div>
-              ))}
+          </div>
+        )}
+
+        {/* AWAITING EVALUATION */}
+        {quiz.round === 'domain' && quiz.status === 'active' && quiz.phase === 'awaiting_evaluation' && (
+          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
+            <div className="text-center py-8">
+              <div className="inline-block p-4 bg-purple-500/20 rounded-full mb-4">
+                <svg className="w-16 h-16 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold mb-2">⚖️ Host is Evaluating...</h2>
+              <p className="text-slate-400 text-lg">Please wait while the host reviews your answer</p>
+              <p className="text-purple-300 text-sm mt-4">📺 Watch the main screen for the question and options</p>
             </div>
           </div>
         )}
@@ -558,10 +567,12 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                 </div>
               )}
             </div>
-            <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-4 mb-4">
-              <p className="text-lg">{currentQuestion.text}</p>
+            
+            {/* Instruction to look at spectator screen */}
+            <div className="bg-purple-500/20 border border-purple-400 rounded-lg p-4 mb-4 text-center">
+              <p className="text-lg font-semibold text-purple-300">📺 Look at the main screen for the question!</p>
               {currentQuestion.passedFrom && (
-                <p className="text-sm text-yellow-400 mt-2"> Passed question</p>
+                <p className="text-sm text-yellow-400 mt-2">⚠️ Passed question</p>
               )}
             </div>
             
@@ -573,15 +584,10 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
               try {
                 const result = await submitDomainAnswer(quiz.id, selectedTeam, currentQuestion.id, answer, quiz.phase === 'answering_with_options');
                 if (result.success) {
-                  if (result.isCorrect) {
+                  if (result.needsEvaluation) {
                     setToast({
-                      message: `Correct! +${result.points} points`,
+                      message: 'Answer submitted! Waiting for host evaluation...',
                       type: 'success'
-                    });
-                  } else {
-                    setToast({
-                      message: 'Wrong!',
-                      type: 'error'
                     });
                   }
                 } else if (result.error) {
@@ -595,94 +601,107 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                 setIsSubmitting(false);
               }
             }} className="space-y-4">
-              <textarea
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:outline-none focus:border-emerald-500 transition-colors"
-                placeholder={isMyTurn ? "Type your answer..." : "Type your answer (wait for your turn to submit)..."}
-                rows={4}
-              />
-              {!isMyTurn && (
-                <div className="text-center text-sm text-yellow-400">
-                  Waiting for {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name} to answer...
-                </div>
+              
+              {/* Show text input only when options are NOT shown */}
+              {quiz.phase !== 'answering_with_options' && (
+                <>
+                  <textarea
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:outline-none focus:border-emerald-500 transition-colors"
+                    placeholder={isMyTurn ? "Type your answer..." : "Type your answer (wait for your turn to submit)..."}
+                    rows={4}
+                  />
+                  {!isMyTurn && (
+                    <div className="text-center text-sm text-yellow-400">
+                      Waiting for {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name} to answer...
+                    </div>
+                  )}
+                </>
               )}
+              
+              {/* Show option buttons when options are shown */}
               {quiz.phase === 'answering_with_options' && currentQuestion.options.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Options (click to submit):</p>
-                  {currentQuestion.options.map((opt: string, i: number) => (
-                    <button
-                      key={i}
-                      type="button"
-                      disabled={!isMyTurn || isSubmitting}
-                      onClick={async () => {
-                        if (isSubmitting) return;
-                        setIsSubmitting(true);
-                        try {
-                          const result = await submitDomainAnswer(quiz.id, selectedTeam, currentQuestion.id, opt, true);
-                          if (result.success) {
-                            if (result.isCorrect) {
+                <div className="space-y-3">
+                  <p className="text-lg font-semibold text-center text-white">Select your answer:</p>
+                  {!isMyTurn && (
+                    <div className="text-center text-sm text-yellow-400 mb-2">
+                      Waiting for {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name} to answer...
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    {currentQuestion.options.map((opt: string, i: number) => (
+                      <button
+                        key={i}
+                        type="button"
+                        disabled={!isMyTurn || isSubmitting}
+                        onClick={async () => {
+                          if (isSubmitting) return;
+                          setIsSubmitting(true);
+                          try {
+                            const result = await submitDomainAnswer(quiz.id, selectedTeam, currentQuestion.id, opt, true);
+                            if (result.success) {
+                              if (result.needsEvaluation) {
+                                setToast({
+                                  message: 'Answer submitted! Waiting for host evaluation...',
+                                  type: 'success'
+                                });
+                              }
+                            } else if (result.error) {
                               setToast({
-                                message: `Correct! +${result.points} points`,
-                                type: 'success'
-                              });
-                            } else {
-                              setToast({
-                                message: 'Wrong! -5 points',
+                                message: ` ${result.error}`,
                                 type: 'error'
                               });
                             }
-                          } else if (result.error) {
-                            setToast({
-                              message: ` ${result.error}`,
-                              type: 'error'
-                            });
+                            setAnswer('');
+                          } finally {
+                            setIsSubmitting(false);
                           }
-                          setAnswer('');
-                        } finally {
-                          setIsSubmitting(false);
-                        }
-                      }}
-                      className="w-full p-3 bg-slate-800/50 hover:bg-green-600 rounded-lg text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {opt}
-                    </button>
-                  ))}
+                        }}
+                        className="py-8 bg-slate-800/50 hover:bg-green-600 rounded-lg text-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-4xl font-bold"
+                      >
+                        {String.fromCharCode(65 + i)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
-              <div className="flex gap-4">
-                {quiz.phase === 'answering' && !currentQuestion.optionsViewed && !currentQuestion.optionsDefault && (
-                  <button
-                    type="button"
-                    disabled={!isMyTurn}
-                    onClick={async () => {
-                      const result = await passQuestion(quiz.id, currentQuestion.id, selectedTeam);
-                      if (result.success) {
-                        setToast({ message: 'Question passed', type: 'success' });
-                      }
-                    }}
-                    className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Pass
+              
+              {/* Control buttons - only show when options are NOT shown */}
+              {quiz.phase !== 'answering_with_options' && (
+                <div className="flex gap-4">
+                  {!currentQuestion.optionsViewed && !currentQuestion.optionsDefault && (
+                    <button
+                      type="button"
+                      disabled={!isMyTurn}
+                      onClick={async () => {
+                        const result = await passQuestion(quiz.id, currentQuestion.id, selectedTeam);
+                        if (result.success) {
+                          setToast({ message: 'Question passed', type: 'success' });
+                        }
+                      }}
+                      className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Pass
+                    </button>
+                  )}
+                  {currentQuestion.options.length > 0 && !currentQuestion.optionsViewed && !currentQuestion.optionsDefault && (
+                    <button
+                      type="button"
+                      disabled={!isMyTurn}
+                      onClick={() => showOptions(quiz.id, currentQuestion.id)}
+                      className="flex-1 py-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Show Options (5/-5)
+                    </button>
+                  )}
+                  <button type="submit" disabled={!isMyTurn || isSubmitting} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isSubmitting ? 'Submitting...' : 
+                      currentQuestion.optionsDefault ? 'Submit (10/-5)' : 'Submit (10)'
+                    }
                   </button>
-                )}
-                {quiz.phase === 'answering' && currentQuestion.options.length > 0 && !currentQuestion.optionsViewed && !currentQuestion.optionsDefault && (
-                  <button
-                    type="button"
-                    disabled={!isMyTurn}
-                    onClick={() => showOptions(quiz.id, currentQuestion.id)}
-                    className="flex-1 py-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Options (5/-5)
-                  </button>
-                )}
-                <button type="submit" disabled={!isMyTurn || isSubmitting} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isSubmitting ? 'Submitting...' : 
-                    currentQuestion.optionsDefault ? 'Submit (10/-5)' :
-                    `Submit (${currentQuestion.optionsViewed ? '5/-5' : '10'})`
-                  }
-                </button>
-              </div>
+                </div>
+              )}
             </form>
           </div>
         )}
@@ -848,24 +867,6 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                 </button>
               </form>
             )}
-          </div>
-        )}
-
-        {/* LEADERBOARD - Only show when quiz is not completed */}
-        {quiz.phase !== 'completed' && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-            <h2 className="text-xl font-bold mb-4"><div className="flex items-center gap-2"><Trophy className="w-6 h-6 text-amber-400" /><span>Leaderboard</span></div></h2>
-            <div className="space-y-2">
-              {quiz.teams.sort((a: any, b: any) => b.score - a.score).map((t: any, i: number) => (
-                <div key={t.id} className="flex justify-between items-center bg-slate-800/50 rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl">{i === 0 ? '1st' : i === 1 ? '2nd' : i === 2 ? '3rd' : `${i + 1}.`}</div>
-                    <div className="font-semibold">{t.name}</div>
-                  </div>
-                  <div className="text-xl font-bold">{t.score}</div>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </div>

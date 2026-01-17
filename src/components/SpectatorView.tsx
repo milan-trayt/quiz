@@ -46,6 +46,8 @@ interface Question {
   selectedBy: string | null;
   correctAnswer: string | null;
   passedFrom: string | null;
+  optionsViewed?: boolean;
+  optionsDefault?: boolean;
 }
 
 interface BuzzerQuestion {
@@ -127,6 +129,20 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
       socketInstance.disconnect();
     };
   }, [quiz.id, router]);
+
+  // Periodic check for domain round timer expiry (server-side)
+  useEffect(() => {
+    if (quiz.round === 'domain' && (quiz.phase === 'answering' || quiz.phase === 'answering_with_options')) {
+      const interval = setInterval(() => {
+        fetch('/api/check-domain-timers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quizId: quiz.id })
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [quiz.round, quiz.phase, quiz.id]);
 
   useEffect(() => {
     const prevQuiz = quiz;
@@ -556,6 +572,45 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Awaiting Evaluation */}
+            {quiz.round === 'domain' && quiz.phase === 'awaiting_evaluation' && (
+              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-12 border border-slate-700/50">
+                <div className="text-center mb-6">
+                  <div className="inline-block p-6 bg-purple-500/20 rounded-full mb-6">
+                    <svg className="w-20 h-20 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-4xl font-bold mb-4 text-white">⚖️ Host is Evaluating...</h2>
+                  <p className="text-slate-400 text-xl">Please wait while the host reviews the answer</p>
+                </div>
+
+                {/* Show the question */}
+                {currentQuestion && (
+                  <div className="space-y-4 mt-8">
+                    <div className="bg-slate-900/50 rounded-lg p-6">
+                      <p className="text-sm text-slate-400 mb-3">Question:</p>
+                      <p className="text-2xl font-semibold text-white">{currentQuestion.text}</p>
+                    </div>
+
+                    {/* Show options ONLY if they were viewed */}
+                    {currentQuestion.optionsViewed && currentQuestion.options && currentQuestion.options.length > 0 && (
+                      <div className="bg-slate-900/50 rounded-lg p-6">
+                        <p className="text-sm text-slate-400 mb-4">Options:</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {currentQuestion.options.map((opt: string, idx: number) => (
+                            <div key={idx} className="p-4 bg-slate-800/50 rounded-lg text-left">
+                              <span className="font-semibold text-blue-400">{String.fromCharCode(65 + idx)}.</span> {opt}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

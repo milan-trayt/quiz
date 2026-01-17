@@ -16,6 +16,13 @@ async function emitUpdate(quizId: string) {
   }
 }
 
+async function revalidateQuizPaths(quizId: string) {
+  revalidatePath(`/quiz/${quizId}/host`);
+  revalidatePath(`/quiz/${quizId}/host/setup`);
+  revalidatePath(`/quiz/${quizId}/host/control`);
+  revalidatePath(`/quiz/${quizId}/team`);
+}
+
 // Quiz Actions
 export async function createQuiz() {
   const quiz = await prisma.quiz.create({ data: {} });
@@ -54,8 +61,7 @@ export async function createTeam(quizId: string, teamName: string) {
   const team = await prisma.team.create({
     data: { name: teamName, quizId, sequence: existingCount },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
   emitUpdate(quizId);
   return { success: true, teamId: team.id };
 }
@@ -75,7 +81,8 @@ export async function joinTeam(quizId: string, teamId: string, captainName: stri
   session.quizId = quizId;
   session.teamId = teamId;
   await session.save();
-  revalidatePath(`/quiz/${quizId}`);
+  revalidateQuizPaths(quizId);
+  emitUpdate(quizId);
   return { success: true };
 }
 
@@ -101,7 +108,7 @@ export async function createQuestion(
   });
   const domain = await prisma.domain.findUnique({ where: { id: domainId }, include: { quiz: true } });
   if (domain) {
-    revalidatePath(`/quiz/${domain.quizId}/host`);
+    revalidateQuizPaths(domain.quizId);
     emitUpdate(domain.quizId);
   }
   return { success: true, questionId: question.id };
@@ -117,7 +124,7 @@ export async function createBuzzerQuestion(
   const question = await prisma.buzzerQuestion.create({
     data: { quizId, number: count + 1, text, answer, options },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
+  revalidateQuizPaths(quizId);
   emitUpdate(quizId);
   return { success: true, questionId: question.id };
 }
@@ -126,8 +133,7 @@ export async function deleteTeam(teamId: string) {
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   await prisma.team.delete({ where: { id: teamId } });
   if (team) {
-    revalidatePath(`/quiz/${team.quizId}/host`);
-    revalidatePath(`/quiz/${team.quizId}/team`);
+    revalidateQuizPaths(team.quizId);
     emitUpdate(team.quizId);
   }
   return { success: true };
@@ -142,8 +148,7 @@ export async function disconnectTeamCaptain(teamId: string) {
     data: { captainName: null },
   });
   
-  revalidatePath(`/quiz/${team.quizId}/host`);
-  revalidatePath(`/quiz/${team.quizId}/team`);
+  revalidateQuizPaths(team.quizId);
   emitUpdate(team.quizId);
   return { success: true };
 }
@@ -152,7 +157,7 @@ export async function deleteDomain(domainId: string) {
   const domain = await prisma.domain.findUnique({ where: { id: domainId } });
   await prisma.domain.delete({ where: { id: domainId } });
   if (domain) {
-    revalidatePath(`/quiz/${domain.quizId}/host`);
+    revalidateQuizPaths(domain.quizId);
     emitUpdate(domain.quizId);
   }
   return { success: true };
@@ -165,7 +170,7 @@ export async function deleteQuestion(questionId: string) {
   });
   await prisma.question.delete({ where: { id: questionId } });
   if (question) {
-    revalidatePath(`/quiz/${question.domain.quizId}/host`);
+    revalidateQuizPaths(question.domain.quizId);
     emitUpdate(question.domain.quizId);
   }
   return { success: true };
@@ -175,7 +180,7 @@ export async function deleteBuzzerQuestion(questionId: string) {
   const question = await prisma.buzzerQuestion.findUnique({ where: { id: questionId } });
   await prisma.buzzerQuestion.delete({ where: { id: questionId } });
   if (question) {
-    revalidatePath(`/quiz/${question.quizId}/host`);
+    revalidateQuizPaths(question.quizId);
     emitUpdate(question.quizId);
   }
   return { success: true };
@@ -186,8 +191,7 @@ export async function updateTeam(teamId: string, name: string) {
     where: { id: teamId },
     data: { name },
   });
-  revalidatePath(`/quiz/${team.quizId}/host`);
-  revalidatePath(`/quiz/${team.quizId}/team`);
+  revalidateQuizPaths(team.quizId);
   emitUpdate(team.quizId);
   return { success: true };
 }
@@ -197,7 +201,7 @@ export async function updateDomain(domainId: string, name: string) {
     where: { id: domainId },
     data: { name },
   });
-  revalidatePath(`/quiz/${domain.quizId}/host`);
+  revalidateQuizPaths(domain.quizId);
   emitUpdate(domain.quizId);
   return { success: true };
 }
@@ -214,7 +218,7 @@ export async function updateQuestion(
     data: { text, answer, options, optionsDefault },
     include: { domain: true },
   });
-  revalidatePath(`/quiz/${question.domain.quizId}/host`);
+  revalidateQuizPaths(question.domain.quizId);
   emitUpdate(question.domain.quizId);
   return { success: true };
 }
@@ -229,7 +233,7 @@ export async function updateBuzzerQuestion(
     where: { id: questionId },
     data: { text, answer, options },
   });
-  revalidatePath(`/quiz/${question.quizId}/host`);
+  revalidateQuizPaths(question.quizId);
   emitUpdate(question.quizId);
   return { success: true };
 }
@@ -262,8 +266,8 @@ export async function startDomainRound(quizId: string) {
       lastDomainAnswer: { allAnswers: [] } // Reset answers for new round
     },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -283,14 +287,14 @@ export async function startBuzzerRound(quizId: string) {
       currentQuestionId: firstQuestion?.id,
       buzzSequence: [],
       currentTeamId: null,
-      timerEndsAt: new Date(Date.now() + 10000),
+      timerEndsAt: null,
       pendingBuzzerAnswers: {},
       buzzTimers: {},
       lastRoundResults: {}
     },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -300,8 +304,8 @@ export async function pauseQuiz(quizId: string) {
     where: { id: quizId },
     data: { status: 'paused', timerEndsAt: null },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -314,16 +318,15 @@ export async function resumeQuiz(quizId: string) {
     timerEndsAt = new Date(Date.now() + 60000);
   } else if (quiz?.round === 'buzzer' && quiz.phase === 'answering') {
     timerEndsAt = new Date(Date.now() + 20000);
-  } else if (quiz?.phase === 'showing_answer') {
-    timerEndsAt = new Date(Date.now() + 20000);
   }
+  // showing_answer and showing_result phases don't have timers - controlled manually
   
   await prisma.quiz.update({
     where: { id: quizId },
     data: { status: 'active', timerEndsAt },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -333,8 +336,8 @@ export async function pauseBuzzerRound(quizId: string) {
     where: { id: quizId },
     data: { status: 'paused', timerEndsAt: null },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -347,16 +350,15 @@ export async function resumeBuzzerRound(quizId: string) {
     const buzzIndex = quiz.buzzSequence.indexOf(quiz.currentTeamId!);
     const isFirstBuzzer = buzzIndex === 0;
     timerEndsAt = new Date(Date.now() + (isFirstBuzzer ? 30000 : 20000));
-  } else if (quiz?.phase === 'showing_answer') {
-    timerEndsAt = new Date(Date.now() + 20000);
   }
+  // showing_answer phase doesn't have timer - controlled manually
   
   await prisma.quiz.update({
     where: { id: quizId },
     data: { status: 'active', timerEndsAt },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -381,15 +383,15 @@ export async function handleBuzzTimerExpiry(quizId: string) {
         currentQuestionId: quiz.currentQuestionId,
         buzzSequence: [],
         currentTeamId: null,
-        timerEndsAt: nextQuestion ? new Date(Date.now() + 20000) : null,
+        timerEndsAt: null,
         pendingBuzzerAnswers: {},
         buzzTimers: {},
         lastRoundResults: {}
       },
     });
     
-    revalidatePath(`/quiz/${quizId}/host`);
-    revalidatePath(`/quiz/${quizId}/team`);
+    revalidateQuizPaths(quizId);
+    // Team path revalidated by revalidateQuizPaths
     emitUpdate(quizId);
     return { success: true };
   }
@@ -423,8 +425,8 @@ export async function buzz(quizId: string, teamId: string) {
     },
   });
   
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -443,21 +445,27 @@ export async function submitBuzzerAnswer(
   const pendingAnswers = (quiz.pendingBuzzerAnswers as any) || {};
   if (pendingAnswers[teamId]) return { success: false, error: 'Already submitted' };
 
-  const isCorrect = answer.toLowerCase().trim() === question.answer.toLowerCase().trim();
+  // Don't auto-evaluate - store answer for manual evaluation
   const buzzIndex = quiz.buzzSequence.indexOf(teamId);
   const isFirstBuzzer = buzzIndex === 0;
-  const points = isCorrect ? (isFirstBuzzer ? 10 : 5) : (isFirstBuzzer ? -10 : -5);
   
-  // Queue the answer - always wait for buzz timer or all team timers to expire
-  pendingAnswers[teamId] = { answer, isCorrect, points };
+  // Queue the answer for manual evaluation
+  pendingAnswers[teamId] = { 
+    answer, 
+    isCorrect: null, // Will be set by host
+    points: null, // Will be calculated by host
+    buzzIndex,
+    isFirstBuzzer,
+    needsEvaluation: true
+  };
   
   await prisma.quiz.update({
     where: { id: quizId },
     data: { pendingBuzzerAnswers: pendingAnswers }
   });
 
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true, queued: true };
 }
@@ -470,32 +478,42 @@ export async function processBuzzerAnswers(quizId: string) {
   const question = await prisma.buzzerQuestion.findUnique({ where: { id: quiz.currentQuestionId } });
   if (!question) return { success: false };
   
-  // Process answers in buzz order - stop at first correct answer
-  let foundCorrect = false;
+  // Check if any answers need evaluation
+  const needsEvaluation = Object.values(pendingAnswers).some((a: any) => a.needsEvaluation);
+  
+  if (needsEvaluation) {
+    // Go to awaiting_evaluation phase for host to review
+    await prisma.quiz.update({
+      where: { id: quizId },
+      data: { 
+        phase: 'awaiting_evaluation',
+        timerEndsAt: null
+      }
+    });
+    
+    revalidateQuizPaths(quizId);
+    emitUpdate(quizId);
+    return { success: true, needsEvaluation: true };
+  }
+  
+  // If no evaluation needed (shouldn't happen with new logic), process normally
   const results: any = {};
   
   for (let i = 0; i < quiz.buzzSequence.length; i++) {
     const teamId = quiz.buzzSequence[i];
     const teamAnswer = pendingAnswers[teamId];
-    const isFirstBuzzer = i === 0;
-    
-    if (foundCorrect) {
-      // Someone already got it right - no points for remaining teams
-      break;
-    }
     
     if (teamAnswer) {
-      // Team submitted answer - use points already calculated
       results[teamId] = teamAnswer;
-      await prisma.team.update({ 
-        where: { id: teamId }, 
-        data: { score: { increment: teamAnswer.points } } 
-      });
-      if (teamAnswer.isCorrect) {
-        foundCorrect = true;
+      if (teamAnswer.points) {
+        await prisma.team.update({ 
+          where: { id: teamId }, 
+          data: { score: { increment: teamAnswer.points } } 
+        });
       }
     } else {
       // Team didn't answer - timeout penalty
+      const isFirstBuzzer = i === 0;
       const points = isFirstBuzzer ? -10 : -5;
       results[teamId] = { answer: '', isCorrect: false, points, timeout: true };
       await prisma.team.update({ 
@@ -520,15 +538,15 @@ export async function processBuzzerAnswers(quizId: string) {
       currentQuestionId: quiz.currentQuestionId,
       buzzSequence: [],
       currentTeamId: null,
-      timerEndsAt: new Date(Date.now() + 20000),
+      timerEndsAt: null,
       lastRoundResults: results,
       pendingBuzzerAnswers: {},
       buzzTimers: {}
     },
   });
 
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -573,8 +591,8 @@ export async function submitAnswer(
     data: { currentTeamId: nextTeamId },
   });
 
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true, isCorrect, points };
 }
@@ -606,8 +624,8 @@ export async function selectDomain(quizId: string, domainId: string) {
       lastDomainAnswer: { allAnswers: [] } // Reset answers for new domain
     },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -650,8 +668,8 @@ export async function selectQuestion(quizId: string, questionId: string, teamId:
     where: { id: questionId },
     data: { selectedBy: teamId, attemptedBy: { push: teamId }, optionsViewed: question?.optionsDefault || false },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -665,8 +683,8 @@ export async function showOptions(quizId: string, questionId: string) {
     where: { id: quizId },
     data: { phase: 'answering_with_options' },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -731,14 +749,14 @@ export async function passQuestion(quizId: string, questionId: string, teamId: s
       // Domain complete - show result first
       await prisma.quiz.update({
         where: { id: quizId },
-        data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 15000), questionsInDomain: newQuestionsInDomain },
+        data: { phase: 'showing_result', timerEndsAt: null, questionsInDomain: newQuestionsInDomain },
       });
     } else {
       await prisma.quiz.update({ 
         where: { id: quizId }, 
         data: { 
           phase: 'showing_result', 
-          timerEndsAt: new Date(Date.now() + 10000), 
+          timerEndsAt: null, 
           questionsInDomain: newQuestionsInDomain
         } 
       });
@@ -749,8 +767,8 @@ export async function passQuestion(quizId: string, questionId: string, teamId: s
     await prisma.quiz.update({ where: { id: quizId }, data: { currentTeamId: nextTeamId, phase: 'answering', timerEndsAt: new Date(Date.now() + 30000), answerTurnIndex: nextAnswerTurnIndex, lastDomainAnswer: answerResult } });
   }
   
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }
@@ -760,70 +778,10 @@ export async function handleTimerExpiry(quizId: string) {
     where: { id: quizId }, 
     include: { teams: { orderBy: [{ sequence: 'asc' }, { id: 'asc' }] } } 
   });
-  if (!quiz || (quiz.phase !== 'answering' && quiz.phase !== 'answering_with_options' && quiz.phase !== 'showing_result')) return { success: false };
+  if (!quiz || (quiz.phase !== 'answering' && quiz.phase !== 'answering_with_options')) return { success: false };
   
-  // Handle showing_result timer expiry (move to next question selector)
-  if (quiz.phase === 'showing_result' && quiz.round === 'domain') {
-    const teamCount = quiz.teams.length;
-    const newQuestionsInDomain = quiz.questionsInDomain;
-    const domain = await prisma.domain.findUnique({ where: { id: quiz.selectedDomainId! }, include: { questions: true } });
-    const totalQuestionsForDomain = Math.floor((domain?.questions.length || 0) / teamCount) * teamCount;
-    
-    if (newQuestionsInDomain >= totalQuestionsForDomain) {
-      // Domain complete - move to next domain selector
-      const completedSelections = (quiz.completedDomainRounds || 0) + 1;
-      if (completedSelections >= (quiz.totalDomainRounds || 0)) {
-        await prisma.quiz.update({ 
-          where: { id: quizId }, 
-          data: { 
-            phase: 'domain_round_ended', 
-            currentTeamId: null, 
-            currentQuestionId: null, 
-            selectedDomainId: null, 
-            timerEndsAt: null, 
-            completedDomainRounds: completedSelections 
-          } 
-        });
-      } else {
-        const nextDomainIndex = (quiz.domainIndex + 1) % teamCount;
-        await prisma.quiz.update({ 
-          where: { id: quizId }, 
-          data: { 
-            currentTeamId: quiz.teams[nextDomainIndex]?.id, 
-            phase: 'selecting_domain', 
-            currentQuestionId: null, 
-            selectedDomainId: null, 
-            timerEndsAt: null, 
-            questionsInDomain: 0, 
-            domainSelectingTeam: nextDomainIndex, 
-            completedDomainRounds: completedSelections, 
-            domainIndex: nextDomainIndex, 
-            questionSelectorIndex: nextDomainIndex, 
-            answerTurnIndex: nextDomainIndex 
-          } 
-        });
-      }
-    } else {
-      // Continue in same domain - move to next question selector
-      const nextSelectorIndex = (quiz.questionSelectorIndex + 1) % teamCount;
-      await prisma.quiz.update({ 
-        where: { id: quizId }, 
-        data: { 
-          currentTeamId: quiz.teams[nextSelectorIndex]?.id, 
-          phase: 'selecting_question', 
-          currentQuestionId: null, 
-          timerEndsAt: null, 
-          questionSelectorIndex: nextSelectorIndex, 
-          answerTurnIndex: nextSelectorIndex 
-        } 
-      });
-    }
-    
-    revalidatePath(`/quiz/${quizId}/host`);
-    revalidatePath(`/quiz/${quizId}/team`);
-    emitUpdate(quizId);
-    return { success: true };
-  }
+  // NOTE: showing_result and showing_answer phases no longer have timers
+  // They are now controlled manually by the host via nextDomainQuestion() and nextBuzzerQuestion()
   
   // Handle answering timer expiry (timeout - pass question)
   if (quiz.phase === 'answering' || quiz.phase === 'answering_with_options') {
@@ -861,6 +819,9 @@ export async function submitDomainAnswer(
   const isPassed = question.passedFrom !== null;
   const teamCount = quiz.teams.length;
   
+  // ALWAYS require manual evaluation by host
+  const needsManualEvaluation = true; // Host must evaluate all answers
+  
   let points = 0;
   
   // Store answer result with all team answers
@@ -874,7 +835,8 @@ export async function submitDomainAnswer(
     points: 0, 
     withOptions, 
     wasTabActive,
-    isTimeout
+    isTimeout,
+    evaluated: false // Not yet evaluated by host
   };
   
   const answerResult = { 
@@ -887,148 +849,23 @@ export async function submitDomainAnswer(
     questionText: question.text, 
     correctAnswer: question.answer, 
     questionCompleted: false,
+    needsManualEvaluation,
     allAnswers: [...existingAnswers.filter((a: any) => a.teamId !== teamId), teamAnswer] // Replace if team answered again
   };
   
-  if (isCorrect) {
-    // Award points based on question type
-    if (question.optionsDefault) {
-      // Options default questions: +10 for correct
-      points = 10;
-    } else {
-      // Regular questions: +10 without options, +5 with options
-      points = withOptions ? 5 : 10;
-    }
-    answerResult.points = points;
-    teamAnswer.points = points;
-    answerResult.questionCompleted = true;
-    await prisma.team.update({ where: { id: teamId }, data: { score: { increment: points } } });
-    await prisma.question.update({ where: { id: questionId }, data: { isAnswered: true, correctAnswer: answer } });
-    await prisma.quiz.update({ where: { id: quizId }, data: { lastDomainAnswer: answerResult } });
-    
-    const newQuestionsInDomain = quiz.questionsInDomain + 1;
-    const domain = await prisma.domain.findUnique({ where: { id: quiz.selectedDomainId! }, include: { questions: true } });
-    const totalQuestionsForDomain = Math.floor((domain?.questions.length || 0) / teamCount) * teamCount;
-    
-    if (newQuestionsInDomain >= totalQuestionsForDomain) {
-      // Domain complete - show result first
-      await prisma.quiz.update({
-        where: { id: quizId },
-        data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 15000), questionsInDomain: newQuestionsInDomain },
-      });
-    } else {
-      // Continue in same domain - show result first, don't update selector yet (will be done in timer expiry)
-      await prisma.quiz.update({
-        where: { id: quizId },
-        data: { 
-          phase: 'showing_result', 
-          timerEndsAt: new Date(Date.now() + 10000), 
-          questionsInDomain: newQuestionsInDomain
-        },
-      });
-    }
-  } else if (!withOptions && actuallyCorrect && !wasTabActive) {
-    // Tab was inactive - 0 points but don't pass, mark as answered and move to next selector
-    await prisma.question.update({ where: { id: questionId }, data: { isAnswered: true, correctAnswer: question.answer } });
-    const newQuestionsInDomain = quiz.questionsInDomain + 1;
-    const domain = await prisma.domain.findUnique({ where: { id: quiz.selectedDomainId! }, include: { questions: true } });
-    const totalQuestionsForDomain = Math.floor((domain?.questions.length || 0) / teamCount) * teamCount;
-    
-    if (newQuestionsInDomain >= totalQuestionsForDomain) {
-      const completedSelections = (quiz.completedDomainRounds || 0) + 1;
-      if (completedSelections >= (quiz.totalDomainRounds || 0)) {
-        await prisma.quiz.update({ where: { id: quizId }, data: { phase: 'domain_round_ended', currentTeamId: null, currentQuestionId: null, selectedDomainId: null, timerEndsAt: null, completedDomainRounds: completedSelections } });
-      } else {
-        const nextDomainIndex = (quiz.domainIndex + 1) % teamCount;
-        await prisma.quiz.update({ where: { id: quizId }, data: { currentTeamId: quiz.teams[nextDomainIndex]?.id, phase: 'selecting_domain', currentQuestionId: null, selectedDomainId: null, timerEndsAt: null, questionsInDomain: 0, domainSelectingTeam: nextDomainIndex, completedDomainRounds: completedSelections, domainIndex: nextDomainIndex, questionSelectorIndex: nextDomainIndex, answerTurnIndex: nextDomainIndex } });
-      }
-    } else {
-      const nextSelectorIndex = (quiz.questionSelectorIndex + 1) % teamCount;
-      await prisma.quiz.update({ where: { id: quizId }, data: { currentTeamId: quiz.teams[nextSelectorIndex]?.id, phase: 'selecting_question', currentQuestionId: null, timerEndsAt: null, questionsInDomain: newQuestionsInDomain, questionSelectorIndex: nextSelectorIndex, answerTurnIndex: nextSelectorIndex } });
-    }
-  } else if (withOptions || question.optionsDefault) {
-    // Wrong with options OR wrong on optionsDefault question - penalty -5 points, dismiss question
-    points = -5;
-    answerResult.points = points;
-    teamAnswer.points = points;
-    answerResult.questionCompleted = true;
-    await prisma.team.update({ where: { id: teamId }, data: { score: { increment: points } } });
-    await prisma.question.update({ where: { id: questionId }, data: { isAnswered: true, correctAnswer: question.answer } });
-    await prisma.quiz.update({ where: { id: quizId }, data: { lastDomainAnswer: answerResult } });
-    
-    const newQuestionsInDomain = quiz.questionsInDomain + 1;
-    const domain = await prisma.domain.findUnique({ where: { id: quiz.selectedDomainId! }, include: { questions: true } });
-    const totalQuestionsForDomain = Math.floor((domain?.questions.length || 0) / teamCount) * teamCount;
-    
-    if (newQuestionsInDomain >= totalQuestionsForDomain) {
-      await prisma.quiz.update({
-        where: { id: quizId },
-        data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 15000), questionsInDomain: newQuestionsInDomain },
-      });
-    } else {
-      await prisma.quiz.update({
-        where: { id: quizId },
-        data: { 
-          phase: 'showing_result', 
-          timerEndsAt: new Date(Date.now() + 10000), 
-          questionsInDomain: newQuestionsInDomain
-        },
-      });
-    }
-  } else {
-    // Wrong without options - auto pass to next team
-    const attemptedTeams = [...(question.attemptedBy || []), teamId];
-    let foundNextTeam = false;
-    let nextAnswerTurnIndex = quiz.answerTurnIndex;
-    let nextTeamId = teamId;
-    
-    for (let i = 0; i < teamCount; i++) {
-      nextAnswerTurnIndex = (nextAnswerTurnIndex + 1) % teamCount;
-      const candidateTeamId = quiz.teams[nextAnswerTurnIndex]?.id;
-      if (!attemptedTeams.includes(candidateTeamId)) {
-        nextTeamId = candidateTeamId;
-        foundNextTeam = true;
-        break;
-      }
-    }
-    
-    if (foundNextTeam) {
-      // Pass to next team - store this team's wrong answer
-      await prisma.question.update({ where: { id: questionId }, data: { passedFrom: question.passedFrom || teamId, attemptedBy: { push: teamId } } });
-      await prisma.quiz.update({ where: { id: quizId }, data: { currentTeamId: nextTeamId, phase: 'answering', timerEndsAt: new Date(Date.now() + 30000), answerTurnIndex: nextAnswerTurnIndex, lastDomainAnswer: answerResult } });
-    } else {
-      // No more teams - dismiss and move to next question selector
-      answerResult.questionCompleted = true;
-      await prisma.question.update({ where: { id: questionId }, data: { isAnswered: true, correctAnswer: question.answer, attemptedBy: { push: teamId } } });
-      await prisma.quiz.update({ where: { id: quizId }, data: { lastDomainAnswer: answerResult } });
-      
-      const newQuestionsInDomain = quiz.questionsInDomain + 1;
-      const domain = await prisma.domain.findUnique({ where: { id: quiz.selectedDomainId! }, include: { questions: true } });
-      const totalQuestionsForDomain = Math.floor((domain?.questions.length || 0) / teamCount) * teamCount;
-      
-      if (newQuestionsInDomain >= totalQuestionsForDomain) {
-        // Domain complete - show result first
-        await prisma.quiz.update({
-          where: { id: quizId },
-          data: { phase: 'showing_result', timerEndsAt: new Date(Date.now() + 15000), questionsInDomain: newQuestionsInDomain },
-        });
-      } else {
-        await prisma.quiz.update({ 
-          where: { id: quizId }, 
-          data: { 
-            phase: 'showing_result', 
-            timerEndsAt: new Date(Date.now() + 10000), 
-            questionsInDomain: newQuestionsInDomain
-          } 
-        });
-      }
-    }
-  }
-
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  // Always go to awaiting_evaluation phase for host to evaluate
+  await prisma.quiz.update({ 
+    where: { id: quizId }, 
+    data: { 
+      phase: 'awaiting_evaluation', 
+      timerEndsAt: null,
+      lastDomainAnswer: answerResult 
+    } 
+  });
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
-  return { success: true, isCorrect, points, correctAnswer: question.answer };
+  return { success: true, needsEvaluation: true };
 }
 
 export async function resetQuiz(quizId: string) {
@@ -1066,8 +903,8 @@ export async function resetQuiz(quizId: string) {
       lastDomainAnswer: {}
     },
   });
-  revalidatePath(`/quiz/${quizId}/host`);
-  revalidatePath(`/quiz/${quizId}/team`);
+  revalidateQuizPaths(quizId);
+  // Team path revalidated by revalidateQuizPaths
   emitUpdate(quizId);
   return { success: true };
 }

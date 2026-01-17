@@ -12,7 +12,7 @@ export default function HostSessionManager({ quizzes }: { quizzes: any[] }) {
   const handleCreateSession = async () => {
     const result = await createQuiz();
     if (result.success) {
-      router.push(`/quiz/${result.quizId}/host`);
+      router.push(`/quiz/${result.quizId}/host/setup`);
     }
   };
 
@@ -95,10 +95,16 @@ export default function HostSessionManager({ quizzes }: { quizzes: any[] }) {
 
                   <div className="flex gap-2">
                     <button
-                      onClick={() => router.push(`/quiz/${quiz.id}/host`)}
+                      onClick={() => router.push(`/quiz/${quiz.id}/host/setup`)}
                       className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded font-semibold text-sm"
                     >
-                      Open
+                      Setup
+                    </button>
+                    <button
+                      onClick={() => router.push(`/quiz/${quiz.id}/host/control`)}
+                      className="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded font-semibold text-sm"
+                    >
+                      Control
                     </button>
                     <button
                       onClick={() => handleDeleteSession(quiz.id)}
