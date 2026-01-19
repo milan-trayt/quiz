@@ -1,9 +1,14 @@
 'use client';
 
-import { Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, ArrowRight, Users, BookOpen, HelpCircle, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Input, { Select } from '@/components/ui/Input';
+import Badge from '@/components/ui/Badge';
+import EmptyState from '@/components/ui/EmptyState';
 import { 
   createTeam, 
   createDomain, 
@@ -84,409 +89,468 @@ export default function SetupDashboard({ quiz }: { quiz: any }) {
   };
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold">🎯 Setup Dashboard</h1>
-            <a 
-              href={`/quiz/${quiz.id}/host/control`}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold"
+        <Card variant="elevated">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">🎯 Setup Dashboard</h1>
+              <p className="text-slate-400">Configure your quiz before starting</p>
+            </div>
+            <Button
+              variant="success"
+              size="lg"
+              icon={<ArrowRight className="w-5 h-5" />}
+              onClick={() => router.push(`/quiz/${quiz.id}/host/control`)}
             >
-              Go to Control Dashboard →
-            </a>
+              Control Dashboard
+            </Button>
           </div>
-          <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-4">
-            <p className="text-sm font-medium">Quiz ID:</p>
-            <p className="text-2xl font-mono mt-2 break-all">{quiz.id}</p>
-          </div>
-        </div>
+          <Card variant="info" className="mt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-slate-400">Quiz ID</p>
+                <p className="text-xl md:text-2xl font-mono mt-1 break-all">{quiz.id}</p>
+              </div>
+            </div>
+          </Card>
+        </Card>
 
         {/* Teams Section */}
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold mb-4">👥 Teams ({quiz.teams.length})</h2>
-          <form onSubmit={handleCreateTeam} className="mb-4 flex gap-2">
-            <input
-              type="text"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              className="flex-1 px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:border-indigo-500 transition-colors"
-              placeholder="Team name"
-              required
-            />
-            <button type="submit" className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-              <Plus className="w-5 h-5" />
-            </button>
+        <Card>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Users className="w-6 h-6 text-indigo-400" />
+              <h2 className="text-2xl font-bold">Teams</h2>
+              <Badge variant="neutral">{quiz.teams.length}</Badge>
+            </div>
+          </div>
+          
+          <form onSubmit={handleCreateTeam} className="mb-6">
+            <div className="flex gap-2">
+              <Input
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                placeholder="Enter team name"
+                required
+              />
+              <Button type="submit" variant="success" icon={<Plus className="w-5 h-5" />}>
+                Add
+              </Button>
+            </div>
           </form>
-          <div className="space-y-2">
-            {quiz.teams.map((team: any) => (
-              <div key={team.id} className="bg-slate-800/50 rounded-lg p-3 flex justify-between items-center">
-                {editingTeam === team.id ? (
-                  <input
-                    type="text"
-                    value={editValues[team.id] || team.name}
-                    onChange={(e) => setEditValues({ ...editValues, [team.id]: e.target.value })}
-                    className="flex-1 px-2 py-1 rounded bg-slate-900/50 border border-slate-700"
-                    autoFocus
-                  />
-                ) : (
-                  <div className="font-semibold">{team.name}</div>
-                )}
-                <div className="flex gap-2">
+
+          {quiz.teams.length === 0 ? (
+            <EmptyState
+              icon={<Users className="w-16 h-16" />}
+              title="No teams yet"
+              description="Add your first team to get started"
+            />
+          ) : (
+            <div className="space-y-3">
+              {quiz.teams.map((team: any) => (
+                <Card key={team.id} variant="interactive">
                   {editingTeam === team.id ? (
-                    <>
-                      <button
+                    <div className="flex gap-2">
+                      <Input
+                        value={editValues[team.id] || team.name}
+                        onChange={(e) => setEditValues({ ...editValues, [team.id]: e.target.value })}
+                        autoFocus
+                      />
+                      <Button
+                        variant="success"
+                        size="sm"
+                        icon={<Save className="w-4 h-4" />}
                         onClick={async () => {
                           await updateTeam(team.id, editValues[team.id]);
                           setEditingTeam(null);
                           router.refresh();
                         }}
-                        className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
                       >
-                        <Save className="w-4 h-4" />
-                      </button>
-                      <button
+                        Save
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<X className="w-4 h-4" />}
                         onClick={() => setEditingTeam(null)}
-                        className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm"
                       >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </>
+                        Cancel
+                      </Button>
+                    </div>
                   ) : (
-                    <>
-                      <button
-                        onClick={() => {
-                          setEditingTeam(team.id);
-                          setEditValues({ ...editValues, [team.id]: team.name });
-                        }}
-                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={async () => {
-                          if (confirm(`Delete ${team.name}?`)) {
-                            await deleteTeam(team.id);
-                            router.refresh();
-                          }
-                        }}
-                        className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
+                    <div className="flex justify-between items-center">
+                      <div className="font-semibold text-lg">{team.name}</div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={<Edit2 className="w-4 h-4" />}
+                          onClick={() => {
+                            setEditingTeam(team.id);
+                            setEditValues({ ...editValues, [team.id]: team.name });
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          icon={<Trash2 className="w-4 h-4" />}
+                          onClick={async () => {
+                            if (confirm(`Delete ${team.name}?`)) {
+                              await deleteTeam(team.id);
+                              router.refresh();
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
                   )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </Card>
 
         {/* Domains Section */}
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold mb-4">📚 Domains ({quiz.domains.length})</h2>
-          <form onSubmit={handleCreateDomain} className="mb-4 flex gap-2">
-            <input
-              type="text"
-              value={domainName}
-              onChange={(e) => setDomainName(e.target.value)}
-              className="flex-1 px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:border-indigo-500 transition-colors"
-              placeholder="Domain name"
-              required
-            />
-            <button type="submit" className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
-              <Plus className="w-5 h-5" />
-            </button>
+        <Card>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <BookOpen className="w-6 h-6 text-purple-400" />
+              <h2 className="text-2xl font-bold">Domains</h2>
+              <Badge variant="neutral">{quiz.domains.length}</Badge>
+            </div>
+          </div>
+          
+          <form onSubmit={handleCreateDomain} className="mb-6">
+            <div className="flex gap-2">
+              <Input
+                value={domainName}
+                onChange={(e) => setDomainName(e.target.value)}
+                placeholder="Enter domain name"
+                required
+              />
+              <Button type="submit" variant="success" icon={<Plus className="w-5 h-5" />}>
+                Add
+              </Button>
+            </div>
           </form>
-          <div className="space-y-4">
-            {quiz.domains.map((domain: any) => (
-              <div key={domain.id} className="bg-slate-800/50 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-3">
-                  {editingDomain === domain.id ? (
-                    <input
-                      type="text"
-                      value={editValues[domain.id] || domain.name}
-                      onChange={(e) => setEditValues({ ...editValues, [domain.id]: e.target.value })}
-                      className="flex-1 px-2 py-1 rounded bg-slate-900/50 border border-slate-700"
-                      autoFocus
-                    />
-                  ) : (
-                    <div className="font-semibold text-lg">{domain.name}</div>
-                  )}
-                  <div className="flex gap-2">
+
+          {quiz.domains.length === 0 ? (
+            <EmptyState
+              icon={<BookOpen className="w-16 h-16" />}
+              title="No domains yet"
+              description="Add knowledge domains to organize your questions"
+            />
+          ) : (
+            <div className="space-y-4">
+              {quiz.domains.map((domain: any) => (
+                <Card key={domain.id} variant="elevated">
+                  <div className="flex justify-between items-center mb-4">
                     {editingDomain === domain.id ? (
-                      <>
-                        <button
+                      <div className="flex-1 flex gap-2">
+                        <Input
+                          value={editValues[domain.id] || domain.name}
+                          onChange={(e) => setEditValues({ ...editValues, [domain.id]: e.target.value })}
+                          autoFocus
+                        />
+                        <Button
+                          variant="success"
+                          size="sm"
+                          icon={<Save className="w-4 h-4" />}
                           onClick={async () => {
                             await updateDomain(domain.id, editValues[domain.id]);
                             setEditingDomain(null);
                             router.refresh();
                           }}
-                          className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
                         >
-                          <Save className="w-4 h-4" />
-                        </button>
-                        <button
+                          Save
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon={<X className="w-4 h-4" />}
                           onClick={() => setEditingDomain(null)}
-                          className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm"
                         >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </>
+                          Cancel
+                        </Button>
+                      </div>
                     ) : (
                       <>
-                        <button
-                          onClick={() => {
-                            setEditingDomain(domain.id);
-                            setEditValues({ ...editValues, [domain.id]: domain.name });
-                          }}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (confirm(`Delete ${domain.name}?`)) {
-                              await deleteDomain(domain.id);
-                              router.refresh();
-                            }
-                          }}
-                          className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-xl font-bold">{domain.name}</h3>
+                          <Badge variant="info">{domain.questions.length} questions</Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={<Edit2 className="w-4 h-4" />}
+                            onClick={() => {
+                              setEditingDomain(domain.id);
+                              setEditValues({ ...editValues, [domain.id]: domain.name });
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            icon={<Trash2 className="w-4 h-4" />}
+                            onClick={async () => {
+                              if (confirm(`Delete ${domain.name}?`)) {
+                                await deleteDomain(domain.id);
+                                router.refresh();
+                              }
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       </>
                     )}
                   </div>
-                </div>
-                
-                {/* Questions List */}
-                {domain.questions.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-sm text-slate-400">Questions: {domain.questions.length}</p>
-                    {domain.questions.map((q: any) => (
-                      <div key={q.id} className="bg-slate-900/50 rounded p-3">
-                        {editingQuestion === q.id ? (
-                          <div className="space-y-2">
-                            <input
-                              type="text"
-                              value={editValues[`${q.id}_text`] || q.text}
-                              onChange={(e) => setEditValues({ ...editValues, [`${q.id}_text`]: e.target.value })}
-                              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700"
-                              placeholder="Question text"
-                            />
-                            <div className="space-y-1">
-                              {(editValues[`${q.id}_options`] || q.options || []).map((opt: string, i: number) => (
-                                <div key={i} className="flex gap-2 items-center">
-                                  <input
-                                    type="radio"
-                                    name={`correct_${q.id}`}
-                                    checked={(editValues[`${q.id}_answer`] || q.answer) === opt}
-                                    onChange={() => setEditValues({ ...editValues, [`${q.id}_answer`]: opt })}
-                                    className="w-4 h-4"
-                                  />
-                                  <input
-                                    type="text"
-                                    value={opt}
-                                    onChange={(e) => {
-                                      const newOpts = [...(editValues[`${q.id}_options`] || q.options || [])];
-                                      newOpts[i] = e.target.value;
-                                      setEditValues({ ...editValues, [`${q.id}_options`]: newOpts });
-                                    }}
-                                    className="flex-1 px-2 py-1 rounded bg-slate-800 border border-slate-700 text-sm"
-                                    placeholder={`Option ${i + 1}`}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={async () => {
-                                  await updateQuestion(
-                                    q.id,
-                                    editValues[`${q.id}_text`] || q.text,
-                                    editValues[`${q.id}_answer`] || q.answer,
-                                    editValues[`${q.id}_options`] || q.options || []
-                                  );
-                                  setEditingQuestion(null);
-                                  router.refresh();
-                                }}
-                                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() => setEditingQuestion(null)}
-                                className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex-1">
-                                <span className="text-xs text-slate-500">Q{q.number}</span>
-                                {q.optionsDefault && (
-                                  <span className="ml-2 px-2 py-1 bg-blue-500/30 text-blue-300 rounded text-xs">MC</span>
-                                )}
-                                <p className="text-sm mt-1">{q.text}</p>
-                              </div>
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => {
-                                    setEditingQuestion(q.id);
-                                    setEditValues({
-                                      ...editValues,
-                                      [`${q.id}_text`]: q.text,
-                                      [`${q.id}_answer`]: q.answer,
-                                      [`${q.id}_options`]: q.options || []
-                                    });
-                                  }}
-                                  className="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
-                                >
-                                  <Edit2 className="w-3 h-3" />
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (confirm('Delete this question?')) {
-                                      await deleteQuestion(q.id);
-                                      router.refresh();
-                                    }
-                                  }}
-                                  className="px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              </div>
-                            </div>
-                            {q.options && q.options.length > 0 && (
-                              <div className="mt-2 space-y-1">
-                                {q.options.map((opt: string, i: number) => (
-                                  <div key={i} className="text-xs flex items-center gap-2">
-                                    <span className={opt === q.answer ? 'text-green-400 font-semibold' : 'text-slate-400'}>
-                                      {String.fromCharCode(65 + i)}. {opt}
-                                      {opt === q.answer && ' ✓'}
-                                    </span>
+                  
+                  {/* Questions List */}
+                  {domain.questions.length > 0 && (
+                    <div className="mt-4 space-y-2 border-t border-slate-700 pt-4">
+                      {domain.questions.map((q: any) => (
+                        <div key={q.id} className="bg-slate-800/50 rounded-lg p-3">
+                          {editingQuestion === q.id ? (
+                            <div className="space-y-3">
+                              <Input
+                                value={editValues[`${q.id}_text`] || q.text}
+                                onChange={(e) => setEditValues({ ...editValues, [`${q.id}_text`]: e.target.value })}
+                                placeholder="Question text"
+                              />
+                              <div className="space-y-2">
+                                {(editValues[`${q.id}_options`] || q.options || []).map((opt: string, i: number) => (
+                                  <div key={i} className="flex gap-2 items-center">
+                                    <input
+                                      type="radio"
+                                      name={`correct_${q.id}`}
+                                      checked={(editValues[`${q.id}_answer`] || q.answer) === opt}
+                                      onChange={() => setEditValues({ ...editValues, [`${q.id}_answer`]: opt })}
+                                      className="w-4 h-4 text-indigo-600"
+                                    />
+                                    <Input
+                                      value={opt}
+                                      onChange={(e) => {
+                                        const newOpts = [...(editValues[`${q.id}_options`] || q.options || [])];
+                                        newOpts[i] = e.target.value;
+                                        setEditValues({ ...editValues, [`${q.id}_options`]: newOpts });
+                                      }}
+                                      placeholder={`Option ${i + 1}`}
+                                    />
                                   </div>
                                 ))}
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="success"
+                                  size="sm"
+                                  onClick={async () => {
+                                    await updateQuestion(
+                                      q.id,
+                                      editValues[`${q.id}_text`] || q.text,
+                                      editValues[`${q.id}_answer`] || q.answer,
+                                      editValues[`${q.id}_options`] || q.options || []
+                                    );
+                                    setEditingQuestion(null);
+                                    router.refresh();
+                                  }}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingQuestion(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Badge variant="neutral">Q{q.number}</Badge>
+                                    {q.optionsDefault && (
+                                      <Badge variant="info">Multiple Choice</Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm">{q.text}</p>
+                                </div>
+                                <div className="flex gap-1 ml-4">
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    icon={<Edit2 className="w-3 h-3" />}
+                                    aria-label="Edit question"
+                                    onClick={() => {
+                                      setEditingQuestion(q.id);
+                                      setEditValues({
+                                        ...editValues,
+                                        [`${q.id}_text`]: q.text,
+                                        [`${q.id}_answer`]: q.answer,
+                                        [`${q.id}_options`]: q.options || []
+                                      });
+                                    }}
+                                  />
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    icon={<Trash2 className="w-3 h-3" />}
+                                    aria-label="Delete question"
+                                    onClick={async () => {
+                                      if (confirm('Delete this question?')) {
+                                        await deleteQuestion(q.id);
+                                        router.refresh();
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              {q.options && q.options.length > 0 && (
+                                <div className="mt-3 space-y-1 pl-4 border-l-2 border-slate-700">
+                                  {q.options.map((opt: string, i: number) => (
+                                    <div key={i} className="text-xs flex items-center gap-2">
+                                      <span className={opt === q.answer ? 'text-emerald-400 font-semibold' : 'text-slate-400'}>
+                                        {String.fromCharCode(65 + i)}. {opt}
+                                        {opt === q.answer && ' ✓'}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+        </Card>
 
         {/* Add Question Form */}
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold mb-4">➕ Add Domain Question</h2>
+        <Card>
+          <div className="flex items-center gap-3 mb-6">
+            <HelpCircle className="w-6 h-6 text-emerald-400" />
+            <h2 className="text-2xl font-bold">Add Domain Question</h2>
+          </div>
+          
           <form onSubmit={handleCreateQuestion} className="space-y-4">
-            <select
+            <Select
               value={selectedDomain}
               onChange={(e) => setSelectedDomain(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:border-indigo-500 transition-colors"
+              label="Select Domain"
               required
             >
-              <option value="">Select Domain</option>
+              <option value="">Choose a domain...</option>
               {quiz.domains.map((d: any) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
-            </select>
+            </Select>
 
-            <input
-              type="text"
+            <Input
               value={questionData.text}
               onChange={(e) => setQuestionData({ ...questionData, text: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:border-indigo-500 transition-colors"
-              placeholder="Question text"
+              label="Question Text"
+              placeholder="Enter your question"
               required
             />
             
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Options (select correct answer):</p>
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-slate-300">
+                Answer Options (select the correct one)
+              </label>
               {questionData.options.map((opt, i) => (
-                <div key={i} className="flex gap-2 items-center">
+                <div key={i} className="flex gap-3 items-center">
                   <input
                     type="radio"
                     name="correctAnswer"
                     checked={questionData.correctIndex === i}
                     onChange={() => setQuestionData({ ...questionData, correctIndex: i })}
-                    className="w-5 h-5"
+                    className="w-5 h-5 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-2 focus:ring-indigo-500"
                   />
-                  <input
-                    type="text"
+                  <Input
                     value={opt}
                     onChange={(e) => {
                       const newOpts = [...questionData.options];
                       newOpts[i] = e.target.value;
                       setQuestionData({ ...questionData, options: newOpts });
                     }}
-                    className="flex-1 px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:border-indigo-500 transition-colors"
-                    placeholder={`Option ${i + 1}`}
+                    placeholder={`Option ${String.fromCharCode(65 + i)}`}
                     required
                   />
                 </div>
               ))}
             </div>
             
-            <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-              <input
-                type="checkbox"
-                id="optionsDefault"
-                checked={questionData.optionsDefault}
-                onChange={(e) => setQuestionData({ ...questionData, optionsDefault: e.target.checked })}
-                className="w-5 h-5 text-blue-600"
-              />
-              <label htmlFor="optionsDefault" className="text-sm font-medium">
-                <span className="text-blue-300">Options enabled by default</span>
-                <div className="text-xs text-slate-400 mt-1">
-                  Multiple choice question: Shows options automatically, cannot be passed, +10 correct / -5 incorrect
-                </div>
-              </label>
-            </div>
+            <Card variant="info">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="optionsDefault"
+                  checked={questionData.optionsDefault}
+                  onChange={(e) => setQuestionData({ ...questionData, optionsDefault: e.target.checked })}
+                  className="w-5 h-5 mt-0.5 text-blue-600 bg-slate-900 border-slate-700 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <label htmlFor="optionsDefault" className="flex-1">
+                  <span className="font-medium text-blue-300">Multiple Choice Question</span>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Options shown by default • Cannot be passed • +10 correct / -5 incorrect
+                  </p>
+                </label>
+              </div>
+            </Card>
             
-            <button type="submit" className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
+            <Button type="submit" variant="primary" size="lg" className="w-full">
               Add Question
-            </button>
+            </Button>
           </form>
-        </div>
+        </Card>
 
         {/* Buzzer Questions Section */}
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold mb-4">⚡ Buzzer Questions</h2>
+        <Card>
+          <div className="flex items-center gap-3 mb-6">
+            <Zap className="w-6 h-6 text-amber-400" />
+            <h2 className="text-2xl font-bold">Buzzer Questions</h2>
+            {quiz.buzzerQuestions && quiz.buzzerQuestions.length > 0 && (
+              <Badge variant="warning">{quiz.buzzerQuestions.length}</Badge>
+            )}
+          </div>
           
           {/* Buzzer Questions List */}
           {quiz.buzzerQuestions && quiz.buzzerQuestions.length > 0 && (
-            <div className="mb-6 space-y-2">
-              <p className="text-sm text-slate-400">Total: {quiz.buzzerQuestions.length}</p>
+            <div className="mb-6 space-y-3">
               {quiz.buzzerQuestions.map((q: any) => (
-                <div key={q.id} className="bg-slate-900/50 rounded p-3">
+                <Card key={q.id} variant="interactive">
                   {editingBuzzer === q.id ? (
-                    <div className="space-y-2">
-                      <input
-                        type="text"
+                    <div className="space-y-3">
+                      <Input
                         value={editValues[`${q.id}_text`] || q.text}
                         onChange={(e) => setEditValues({ ...editValues, [`${q.id}_text`]: e.target.value })}
-                        className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700"
                         placeholder="Question text"
                       />
-                      <input
-                        type="text"
+                      <Input
                         value={editValues[`${q.id}_answer`] || q.answer}
                         onChange={(e) => setEditValues({ ...editValues, [`${q.id}_answer`]: e.target.value })}
-                        className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700"
                         placeholder="Answer"
                       />
                       <div className="flex gap-2">
-                        <button
+                        <Button
+                          variant="success"
+                          size="sm"
                           onClick={async () => {
                             await updateBuzzerQuestion(
                               q.id,
@@ -497,27 +561,33 @@ export default function SetupDashboard({ quiz }: { quiz: any }) {
                             setEditingBuzzer(null);
                             router.refresh();
                           }}
-                          className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
                         >
                           Save
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setEditingBuzzer(null)}
-                          className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm"
                         >
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <span className="text-xs text-slate-500">Q{q.number}</span>
-                        <p className="text-sm mt-1">{q.text}</p>
-                        <p className="text-xs text-green-400 mt-1">Answer: {q.answer}</p>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="warning">Q{q.number}</Badge>
+                        </div>
+                        <p className="text-sm mb-2">{q.text}</p>
+                        <p className="text-xs text-emerald-400">Answer: {q.answer}</p>
                       </div>
-                      <div className="flex gap-1">
-                        <button
+                      <div className="flex gap-1 ml-4">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={<Edit2 className="w-3 h-3" />}
+                          aria-label="Edit buzzer question"
                           onClick={() => {
                             setEditingBuzzer(q.id);
                             setEditValues({
@@ -526,52 +596,48 @@ export default function SetupDashboard({ quiz }: { quiz: any }) {
                               [`${q.id}_answer`]: q.answer
                             });
                           }}
-                          className="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                        </button>
-                        <button
+                        />
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          icon={<Trash2 className="w-3 h-3" />}
+                          aria-label="Delete buzzer question"
                           onClick={async () => {
                             if (confirm('Delete this buzzer question?')) {
                               await deleteBuzzerQuestion(q.id);
                               router.refresh();
                             }
                           }}
-                          className="px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        />
                       </div>
                     </div>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           )}
 
           {/* Add Buzzer Question Form */}
           <form onSubmit={handleCreateBuzzerQuestion} className="space-y-4">
-            <input
-              type="text"
+            <Input
               value={buzzerData.text}
               onChange={(e) => setBuzzerData({ ...buzzerData, text: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:border-amber-500 transition-colors"
-              placeholder="Question text"
+              label="Question Text"
+              placeholder="Enter buzzer question"
               required
             />
-            <input
-              type="text"
+            <Input
               value={buzzerData.answer}
               onChange={(e) => setBuzzerData({ ...buzzerData, answer: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:border-amber-500 transition-colors"
-              placeholder="Answer"
+              label="Answer"
+              placeholder="Enter correct answer"
               required
             />
-            <button type="submit" className="w-full py-3 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold">
+            <Button type="submit" variant="warning" size="lg" className="w-full">
               Add Buzzer Question
-            </button>
+            </Button>
           </form>
-        </div>
+        </Card>
       </div>
     </div>
   );

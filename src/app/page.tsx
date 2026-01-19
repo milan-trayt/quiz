@@ -8,61 +8,105 @@ export default function Home() {
   const [spectatorId, setSpectatorId] = useState('');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
-      <div className="max-w-5xl w-full">
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-white mb-3 tracking-tight">Quiz Platform</h1>
-          <p className="text-lg text-slate-400">Real-time multiplayer quiz system</p>
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="max-w-6xl w-full">
+        {/* Hero Section */}
+        <div className="text-center mb-16 animate-fade-in">
+          <h1 className="text-6xl md:text-7xl font-bold text-white mb-4 tracking-tight">
+            Quiz Platform
+          </h1>
+          <p className="text-xl md:text-2xl text-slate-400 font-light">
+            Real-time multiplayer quiz system
+          </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        {/* Role Cards */}
+        <div className="grid md:grid-cols-3 gap-6 animate-scale-in">
+          {/* Host Card */}
           <Link
             href="/host"
-            className="group bg-slate-800/50 backdrop-blur border border-slate-700 hover:border-indigo-500 p-8 rounded-xl transition-all hover:shadow-lg hover:shadow-indigo-500/20"
+            className="group card-interactive hover:scale-105 transition-transform duration-200"
           >
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-indigo-500/10 rounded-lg group-hover:bg-indigo-500/20 transition-colors">
-                <Monitor className="w-8 h-8 text-indigo-400" />
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="p-4 bg-indigo-500/10 rounded-2xl group-hover:bg-indigo-500/20 transition-colors duration-200">
+                <Monitor className="w-12 h-12 text-indigo-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-white mb-2">Host</h2>
+                <p className="text-slate-400 text-sm">Create and manage quiz sessions</p>
+              </div>
+              <div className="w-full pt-4">
+                <div className="btn-primary w-full text-center">
+                  Get Started
+                </div>
               </div>
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2 text-center">Host</h2>
-            <p className="text-slate-400 text-sm text-center">Manage quiz sessions</p>
           </Link>
 
+          {/* Team Card */}
           <Link
             href="/team"
-            className="group bg-slate-800/50 backdrop-blur border border-slate-700 hover:border-emerald-500 p-8 rounded-xl transition-all hover:shadow-lg hover:shadow-emerald-500/20"
+            className="group card-interactive hover:scale-105 transition-transform duration-200"
           >
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
-                <Users className="w-8 h-8 text-emerald-400" />
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="p-4 bg-emerald-500/10 rounded-2xl group-hover:bg-emerald-500/20 transition-colors duration-200">
+                <Users className="w-12 h-12 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-white mb-2">Team</h2>
+                <p className="text-slate-400 text-sm">Join and participate in quizzes</p>
+              </div>
+              <div className="w-full pt-4">
+                <div className="btn-success w-full text-center">
+                  Join Quiz
+                </div>
               </div>
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2 text-center">Team</h2>
-            <p className="text-slate-400 text-sm text-center">Join and participate</p>
           </Link>
 
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 p-8 rounded-xl">
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-amber-500/10 rounded-lg">
-                <Eye className="w-8 h-8 text-amber-400" />
+          {/* Spectator Card */}
+          <div className="card hover:border-amber-500/50 transition-colors duration-200">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="p-4 bg-amber-500/10 rounded-2xl">
+                <Eye className="w-12 h-12 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-white mb-2">Spectator</h2>
+                <p className="text-slate-400 text-sm">Watch quizzes live</p>
+              </div>
+              <div className="w-full pt-4 space-y-3">
+                <input
+                  type="text"
+                  placeholder="Enter Quiz ID"
+                  value={spectatorId}
+                  onChange={(e) => setSpectatorId(e.target.value)}
+                  className="input text-center"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && spectatorId.trim()) {
+                      window.location.href = `/quiz/${spectatorId.trim()}/spectator`;
+                    }
+                  }}
+                  aria-label="Quiz ID for spectator mode"
+                />
+                <button
+                  onClick={() => {
+                    if (spectatorId.trim()) {
+                      window.location.href = `/quiz/${spectatorId.trim()}/spectator`;
+                    }
+                  }}
+                  disabled={!spectatorId.trim()}
+                  className="btn-warning w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Watch Live
+                </button>
               </div>
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2 text-center">Spectator</h2>
-            <p className="text-slate-400 text-sm text-center mb-4">Watch live</p>
-            <input
-              type="text"
-              placeholder="Quiz ID"
-              value={spectatorId}
-              onChange={(e) => setSpectatorId(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg bg-slate-900/50 text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:border-amber-500 transition-colors text-sm"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && spectatorId.trim()) {
-                  window.location.href = `/quiz/${spectatorId.trim()}/spectator`;
-                }
-              }}
-            />
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-12 text-slate-500 text-sm">
+          <p>Choose your role to get started</p>
         </div>
       </div>
     </div>

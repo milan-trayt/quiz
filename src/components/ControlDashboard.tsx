@@ -1,12 +1,15 @@
 'use client';
 
-import { Play, Pause, RotateCcw, Eye, Users, ArrowRight, Check, X, Minus } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Play, Pause, RotateCcw, Eye, Users, ArrowRight, Check, X, Minus, Trophy, BarChart3 } from 'lucide-react';
+import { useEffect } from 'react';
 import { startDomainRound, startBuzzerRound, resetQuiz, disconnectTeamCaptain } from '@/lib/actions';
 import { nextBuzzerQuestion, nextDomainQuestion } from '@/lib/manualProgression';
 import { evaluateDomainAnswer, evaluateBuzzerAnswer, completeEvaluation } from '@/lib/answerEvaluation';
 import { useRouter } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Badge from '@/components/ui/Badge';
 
 export default function ControlDashboard({ quiz }: { quiz: any }) {
   const { socket, isConnected, hasReconnected } = useSocket(quiz.id);
@@ -30,109 +33,131 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
   // are now controlled manually via "Next Question" button
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold">🎮 Control Dashboard</h1>
-            <a 
-              href={`/quiz/${quiz.id}/host/setup`}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
+        <Card variant="elevated">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">🎮 Control Dashboard</h1>
+              <p className="text-slate-400">Manage quiz flow and evaluate answers</p>
+            </div>
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => router.push(`/quiz/${quiz.id}/host/setup`)}
             >
-              ← Back to Setup
-            </a>
+              ← Setup
+            </Button>
           </div>
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-4">
-              <p className="text-sm font-medium">Quiz ID:</p>
-              <p className="text-xl font-mono mt-2 break-all">{quiz.id}</p>
-            </div>
-            <div className="bg-orange-500/20 border border-orange-500 rounded-lg p-4">
-              <p className="text-sm font-medium">Spectator View:</p>
+            <Card variant="info">
+              <p className="text-sm font-medium text-slate-400">Quiz ID</p>
+              <p className="text-lg md:text-xl font-mono mt-2 break-all">{quiz.id}</p>
+            </Card>
+            <Card variant="warning">
+              <p className="text-sm font-medium text-slate-400">Spectator View</p>
               <a 
                 href={`/quiz/${quiz.id}/spectator`} 
                 target="_blank" 
-                className="text-lg font-semibold text-orange-300 hover:text-orange-200 underline mt-2 flex items-center gap-2"
+                className="text-lg font-semibold text-amber-300 hover:text-amber-200 underline mt-2 flex items-center gap-2"
               >
                 <Eye className="w-5 h-5" />
-                Open Spectator Mode
+                Open View
               </a>
-            </div>
-            <div className="bg-slate-800/50 rounded-lg p-4">
-              <p className="text-sm font-medium mb-2">Game Status</p>
+            </Card>
+            <Card>
+              <p className="text-sm font-medium text-slate-400 mb-2">Game Status</p>
               <div className="space-y-1 text-sm">
-                <div>Status: <span className="font-semibold capitalize">{quiz.status}</span></div>
-                <div>Round: <span className="font-semibold capitalize">{quiz.round.replace('_', ' ')}</span></div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={quiz.status === 'active' ? 'success' : 'neutral'}>
+                    {quiz.status}
+                  </Badge>
+                  <Badge variant="info">{quiz.round.replace('_', ' ')}</Badge>
+                </div>
                 {quiz.currentTeamId && (
-                  <div className="mt-2 p-2 bg-green-500/20 border border-green-500 rounded">
-                    <span className="font-semibold">Turn: </span>
-                    {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name}
+                  <div className="mt-2 p-2 bg-emerald-500/20 border border-emerald-500/30 rounded">
+                    <span className="font-semibold text-emerald-300">
+                      Turn: {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name}
+                    </span>
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
           </div>
-        </div>
+        </Card>
 
         {/* Answer Evaluation & Progression Panel - Always visible */}
-        <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 backdrop-blur border-2 border-purple-500 rounded-xl p-6">
-          <h2 className="text-2xl font-bold mb-4 text-center">⚖️ Evaluation & Progression</h2>
+        <Card variant="elevated" className="border-2 border-purple-500/50 bg-gradient-to-r from-purple-900/30 to-pink-900/30">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold">⚖️ Evaluation & Progression</h2>
+          </div>
           
           {/* Domain Round - Awaiting Evaluation */}
           {quiz.phase === 'awaiting_evaluation' && quiz.round === 'domain' && quiz.lastDomainAnswer && (
             <div className="space-y-4">
-              <div className="bg-slate-800/70 rounded-lg p-4">
-                <p className="text-sm text-slate-400 mb-2">Question:</p>
-                <p className="text-lg font-semibold">{quiz.lastDomainAnswer.questionText}</p>
+              <Card>
+                <p className="text-sm text-slate-400 mb-2">Question</p>
+                <p className="text-lg md:text-xl font-semibold">{quiz.lastDomainAnswer.questionText}</p>
+              </Card>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card variant="success">
+                  <p className="text-sm text-slate-400 mb-2">Correct Answer</p>
+                  <p className="text-lg font-semibold text-emerald-300">{quiz.lastDomainAnswer.correctAnswer}</p>
+                </Card>
+                
+                <Card variant="info">
+                  <p className="text-sm text-slate-400 mb-2">Team's Answer</p>
+                  <p className="text-lg font-semibold text-blue-300">{quiz.lastDomainAnswer.answer}</p>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Team: {quiz.teams.find((t: any) => t.id === quiz.lastDomainAnswer.teamId)?.name}
+                  </p>
+                </Card>
               </div>
               
-              <div className="bg-slate-800/70 rounded-lg p-4">
-                <p className="text-sm text-slate-400 mb-2">Correct Answer:</p>
-                <p className="text-lg font-semibold text-green-400">{quiz.lastDomainAnswer.correctAnswer}</p>
-              </div>
-              
-              <div className="bg-slate-800/70 rounded-lg p-4">
-                <p className="text-sm text-slate-400 mb-2">Team's Answer:</p>
-                <p className="text-lg font-semibold text-blue-400">{quiz.lastDomainAnswer.answer}</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Team: {quiz.teams.find((t: any) => t.id === quiz.lastDomainAnswer.teamId)?.name}
-                </p>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <button
+              <div className="grid grid-cols-3 gap-3 md:gap-4">
+                <Button
+                  variant="success"
+                  size="lg"
+                  icon={<Check className="w-5 h-5 md:w-6 md:h-6" />}
                   onClick={async () => {
                     await evaluateDomainAnswer(quiz.id, quiz.lastDomainAnswer.teamId, quiz.currentQuestionId, 'correct');
                     router.refresh();
                   }}
-                  className="py-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
+                  className="flex-col py-6"
                 >
-                  <Check className="w-6 h-6" />
-                  Correct (+10)
-                </button>
+                  <span className="text-sm md:text-base">Correct</span>
+                  <span className="text-xs">+10</span>
+                </Button>
                 
-                <button
+                <Button
+                  variant="warning"
+                  size="lg"
+                  icon={<Minus className="w-5 h-5 md:w-6 md:h-6" />}
                   onClick={async () => {
                     await evaluateDomainAnswer(quiz.id, quiz.lastDomainAnswer.teamId, quiz.currentQuestionId, 'partial');
                     router.refresh();
                   }}
-                  className="py-4 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
+                  className="flex-col py-6"
                 >
-                  <Minus className="w-6 h-6" />
-                  Partial (+5)
-                </button>
+                  <span className="text-sm md:text-base">Partial</span>
+                  <span className="text-xs">+5</span>
+                </Button>
                 
-                <button
+                <Button
+                  variant="danger"
+                  size="lg"
+                  icon={<X className="w-5 h-5 md:w-6 md:h-6" />}
                   onClick={async () => {
                     await evaluateDomainAnswer(quiz.id, quiz.lastDomainAnswer.teamId, quiz.currentQuestionId, 'incorrect');
                     router.refresh();
                   }}
-                  className="py-4 bg-red-600 hover:bg-red-700 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
+                  className="flex-col py-6"
                 >
-                  <X className="w-6 h-6" />
-                  Incorrect (0)
-                </button>
+                  <span className="text-sm md:text-base">Incorrect</span>
+                  <span className="text-xs">0</span>
+                </Button>
               </div>
             </div>
           )}
@@ -140,216 +165,239 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
           {/* Buzzer Round - Awaiting Evaluation */}
           {quiz.phase === 'awaiting_evaluation' && quiz.round === 'buzzer' && quiz.pendingBuzzerAnswers && (
             <div className="space-y-4">
-              <div className="bg-slate-800/70 rounded-lg p-4">
-                <p className="text-sm text-slate-400 mb-2">Question:</p>
-                <p className="text-lg font-semibold">
+              <Card>
+                <p className="text-sm text-slate-400 mb-2">Question</p>
+                <p className="text-lg md:text-xl font-semibold">
                   {quiz.buzzerQuestions?.find((q: any) => q.id === quiz.currentQuestionId)?.text}
                 </p>
-              </div>
+              </Card>
               
-              <div className="bg-slate-800/70 rounded-lg p-4">
-                <p className="text-sm text-slate-400 mb-2">Correct Answer:</p>
-                <p className="text-lg font-semibold text-green-400">
+              <Card variant="success">
+                <p className="text-sm text-slate-400 mb-2">Correct Answer</p>
+                <p className="text-lg font-semibold text-emerald-300">
                   {quiz.buzzerQuestions?.find((q: any) => q.id === quiz.currentQuestionId)?.answer}
                 </p>
-              </div>
+              </Card>
               
               <div className="space-y-3">
-                <p className="text-sm text-slate-400">Submitted Answers (in buzz order):</p>
+                <p className="text-sm font-medium text-slate-300">Submitted Answers (in buzz order)</p>
                 {quiz.buzzSequence.map((teamId: string, index: number) => {
                   const teamAnswer = quiz.pendingBuzzerAnswers[teamId];
                   const team = quiz.teams.find((t: any) => t.id === teamId);
                   const isFirstBuzzer = index === 0;
                   
                   return (
-                    <div key={teamId} className="bg-slate-800/70 rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <p className="font-semibold">{team?.name}</p>
-                          <p className="text-xs text-slate-400">
-                            {isFirstBuzzer ? '1st Buzzer' : `${index + 1}${index === 1 ? 'nd' : index === 2 ? 'rd' : 'th'} Buzzer`}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-slate-400">Answer:</p>
-                          <p className="text-lg font-semibold text-blue-400">{teamAnswer?.answer || 'No answer'}</p>
+                    <Card key={teamId} variant="interactive">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-bold text-lg">{team?.name}</p>
+                            <Badge variant={isFirstBuzzer ? 'warning' : 'neutral'}>
+                              {isFirstBuzzer ? '1st Buzzer' : `${index + 1}${index === 1 ? 'nd' : index === 2 ? 'rd' : 'th'}`}
+                            </Badge>
+                          </div>
+                          <div className="mt-2">
+                            <p className="text-sm text-slate-400">Answer:</p>
+                            <p className="text-lg font-semibold text-blue-300">{teamAnswer?.answer || 'No answer'}</p>
+                          </div>
                         </div>
                       </div>
                       
                       {teamAnswer && (
                         <div className="grid grid-cols-3 gap-2">
-                          <button
+                          <Button
+                            variant="success"
+                            size="sm"
+                            icon={<Check className="w-4 h-4" />}
                             onClick={async () => {
                               await evaluateBuzzerAnswer(quiz.id, teamId, 'correct');
                               router.refresh();
                             }}
-                            className="py-2 bg-green-600 hover:bg-green-700 rounded font-semibold text-sm flex items-center justify-center gap-1"
+                            className="flex-col py-3"
                           >
-                            <Check className="w-4 h-4" />
-                            {isFirstBuzzer ? '+10' : '+5'}
-                          </button>
+                            <span className="text-xs">{isFirstBuzzer ? '+10' : '+5'}</span>
+                          </Button>
                           
-                          <button
+                          <Button
+                            variant="warning"
+                            size="sm"
+                            icon={<Minus className="w-4 h-4" />}
                             onClick={async () => {
                               await evaluateBuzzerAnswer(quiz.id, teamId, 'partial');
                               router.refresh();
                             }}
-                            className="py-2 bg-yellow-600 hover:bg-yellow-700 rounded font-semibold text-sm flex items-center justify-center gap-1"
+                            className="flex-col py-3"
                           >
-                            <Minus className="w-4 h-4" />
-                            {isFirstBuzzer ? '+5' : '+2'}
-                          </button>
+                            <span className="text-xs">{isFirstBuzzer ? '+5' : '+2'}</span>
+                          </Button>
                           
-                          <button
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            icon={<X className="w-4 h-4" />}
                             onClick={async () => {
                               await evaluateBuzzerAnswer(quiz.id, teamId, 'incorrect');
                               router.refresh();
                             }}
-                            className="py-2 bg-red-600 hover:bg-red-700 rounded font-semibold text-sm flex items-center justify-center gap-1"
+                            className="flex-col py-3"
                           >
-                            <X className="w-4 h-4" />
-                            {isFirstBuzzer ? '-10' : '-5'}
-                          </button>
+                            <span className="text-xs">{isFirstBuzzer ? '-10' : '-5'}</span>
+                          </Button>
                         </div>
                       )}
-                    </div>
+                    </Card>
                   );
                 })}
               </div>
               
-              <button
+              <Button
+                variant="primary"
+                size="lg"
                 onClick={async () => {
                   await completeEvaluation(quiz.id);
                   router.refresh();
                 }}
-                className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold text-lg"
+                className="w-full"
               >
                 Complete Evaluation & Show Results
-              </button>
+              </Button>
             </div>
           )}
           
           {/* Next Question Button - Shows in showing_answer or showing_result phase */}
           {quiz.round === 'buzzer' && quiz.phase === 'showing_answer' && (
-            <div className="text-center">
-              <p className="text-slate-400 mb-4">Results are being shown to participants</p>
-              <button
+            <div className="text-center space-y-4">
+              <p className="text-slate-300 text-lg">✅ Results are being shown to participants</p>
+              <Button
+                variant="success"
+                size="lg"
+                icon={<ArrowRight className="w-5 h-5" />}
                 onClick={async () => {
                   await nextBuzzerQuestion(quiz.id);
                   router.refresh();
                 }}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
+                className="w-full"
               >
-                <ArrowRight className="w-5 h-5" />
                 Next Question
-              </button>
+              </Button>
             </div>
           )}
           
           {quiz.round === 'domain' && quiz.phase === 'showing_result' && (
-            <div className="text-center">
-              <p className="text-slate-400 mb-4">Results are being shown to participants</p>
-              <button
+            <div className="text-center space-y-4">
+              <p className="text-slate-300 text-lg">✅ Results are being shown to participants</p>
+              <Button
+                variant="success"
+                size="lg"
+                icon={<ArrowRight className="w-5 h-5" />}
                 onClick={async () => {
                   await nextDomainQuestion(quiz.id);
                   router.refresh();
                 }}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
+                className="w-full"
               >
-                <ArrowRight className="w-5 h-5" />
                 Next Question
-              </button>
+              </Button>
             </div>
           )}
           
           {/* Nothing to evaluate - Idle state */}
           {quiz.phase !== 'awaiting_evaluation' && quiz.phase !== 'showing_result' && quiz.phase !== 'showing_answer' && (
-            <div className="text-center py-8">
-              <div className="text-slate-400 text-lg">
-                <p className="mb-2">💤 Nothing to evaluate right now</p>
+            <div className="text-center py-12">
+              <div className="text-slate-400 text-lg space-y-2">
+                <p className="text-3xl mb-4">💤</p>
+                <p className="font-medium">Nothing to evaluate right now</p>
                 <p className="text-sm">Waiting for teams to submit answers...</p>
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Teams Display (Read-only with kick functionality) */}
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Users className="w-6 h-6" />
-            Teams ({quiz.teams.length})
-          </h2>
+        <Card>
+          <div className="flex items-center gap-3 mb-6">
+            <Users className="w-6 h-6 text-indigo-400" />
+            <h2 className="text-2xl font-bold">Teams</h2>
+            <Badge variant="neutral">{quiz.teams.length}</Badge>
+          </div>
           <div className="grid md:grid-cols-2 gap-4">
             {quiz.teams.map((team: any) => (
-              <div key={team.id} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <div className="flex justify-between items-start mb-2">
+              <Card key={team.id} variant="interactive">
+                <div className="flex justify-between items-start mb-3">
                   <div>
                     <h3 className="text-lg font-bold">{team.name}</h3>
                     <div className="text-sm text-slate-400 mt-1">
-                      Score: <span className="text-white font-semibold">{team.score}</span>
+                      Score: <span className="text-white font-semibold text-lg">{team.score}</span>
                     </div>
                   </div>
-                  <div className={`px-3 py-1 rounded text-xs font-semibold ${
-                    team.captainName 
-                      ? 'bg-green-500/20 text-green-400' 
-                      : 'bg-gray-500/20 text-slate-500'
-                  }`}>
+                  <Badge variant={team.captainName ? 'success' : 'neutral'}>
                     {team.captainName ? 'Connected' : 'Waiting'}
-                  </div>
+                  </Badge>
                 </div>
                 
                 {team.captainName && (
-                  <div className="mt-3 flex justify-between items-center bg-slate-900/50 rounded p-2">
+                  <div className="mt-3 flex justify-between items-center bg-slate-900/50 rounded-lg p-3">
                     <div className="text-sm">
                       <span className="text-slate-400">Captain: </span>
                       <span className="font-semibold">{team.captainName}</span>
                     </div>
-                    <button
+                    <Button
+                      variant="warning"
+                      size="sm"
                       onClick={async () => {
                         if (confirm(`Disconnect ${team.captainName} from ${team.name}?`)) {
                           await disconnectTeamCaptain(team.id);
                           router.refresh();
                         }
                       }}
-                      className="px-3 py-1 bg-orange-600 hover:bg-orange-700 rounded text-sm font-semibold"
                     >
-                      Kick Player
-                    </button>
+                      Kick
+                    </Button>
                   </div>
                 )}
-              </div>
+              </Card>
             ))}
           </div>
-        </div>
+        </Card>
 
         {/* Quiz Controls */}
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold mb-4">🎯 Quiz Controls</h2>
+        <Card>
+          <div className="flex items-center gap-3 mb-6">
+            <Play className="w-6 h-6 text-emerald-400" />
+            <h2 className="text-2xl font-bold">Quiz Controls</h2>
+          </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button
+            <Button
+              variant="primary"
+              size="lg"
+              icon={<Play className="w-5 h-5" />}
               onClick={async () => {
                 await startDomainRound(quiz.id);
                 router.refresh();
               }}
-              className="py-4 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
+              className="flex-col py-6"
             >
-              <Play className="w-5 h-5" />
               Start Domain Round
-            </button>
+            </Button>
             
-            <button
+            <Button
+              variant="warning"
+              size="lg"
+              icon={<Play className="w-5 h-5" />}
               onClick={async () => {
                 await startBuzzerRound(quiz.id);
                 router.refresh();
               }}
-              className="py-4 bg-amber-600 hover:bg-amber-700 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
+              className="flex-col py-6"
             >
-              <Play className="w-5 h-5" />
               Start Buzzer Round
-            </button>
+            </Button>
             
             {quiz.status === 'active' && (quiz.round === 'domain' || quiz.round === 'buzzer') && (
-              <button
+              <Button
+                variant="warning"
+                size="lg"
+                icon={<Pause className="w-5 h-5" />}
                 onClick={async () => {
                   await fetch('/api/pause-quiz', {
                     method: 'POST',
@@ -358,15 +406,17 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
                   });
                   router.refresh();
                 }}
-                className="py-4 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
+                className="flex-col py-6"
               >
-                <Pause className="w-5 h-5" />
                 Pause Quiz
-              </button>
+              </Button>
             )}
             
             {quiz.status === 'paused' && (quiz.round === 'domain' || quiz.round === 'buzzer') && (
-              <button
+              <Button
+                variant="success"
+                size="lg"
+                icon={<Play className="w-5 h-5" />}
                 onClick={async () => {
                   await fetch('/api/resume-quiz', {
                     method: 'POST',
@@ -375,86 +425,96 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
                   });
                   router.refresh();
                 }}
-                className="py-4 bg-green-600 hover:bg-green-700 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
+                className="flex-col py-6"
               >
-                <Play className="w-5 h-5" />
                 Resume Quiz
-              </button>
+              </Button>
             )}
             
-            <button
+            <Button
+              variant="danger"
+              size="lg"
+              icon={<RotateCcw className="w-5 h-5" />}
               onClick={async () => {
                 if (confirm('Reset quiz? This will clear all scores and progress.')) {
                   await resetQuiz(quiz.id);
                   router.refresh();
                 }
               }}
-              className="py-4 bg-red-600 hover:bg-red-700 rounded-lg font-semibold text-lg flex items-center justify-center gap-2"
+              className="flex-col py-6"
             >
-              <RotateCcw className="w-5 h-5" />
               Reset Quiz
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
 
         {/* Game Statistics */}
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-          <h2 className="text-xl font-bold mb-4">📊 Game Statistics</h2>
-          <div className="grid md:grid-cols-4 gap-4">
-            <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-4">
+        <Card>
+          <div className="flex items-center gap-3 mb-6">
+            <BarChart3 className="w-6 h-6 text-blue-400" />
+            <h2 className="text-2xl font-bold">Game Statistics</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card variant="info">
               <p className="text-sm text-slate-400">Total Teams</p>
-              <p className="text-3xl font-bold mt-2">{quiz.teams.length}</p>
-            </div>
-            <div className="bg-purple-500/20 border border-purple-500 rounded-lg p-4">
+              <p className="text-3xl md:text-4xl font-bold mt-2">{quiz.teams.length}</p>
+            </Card>
+            <Card variant="success">
               <p className="text-sm text-slate-400">Connected Players</p>
-              <p className="text-3xl font-bold mt-2">
+              <p className="text-3xl md:text-4xl font-bold mt-2">
                 {quiz.teams.filter((t: any) => t.captainName).length}
               </p>
-            </div>
-            <div className="bg-green-500/20 border border-green-500 rounded-lg p-4">
+            </Card>
+            <Card variant="info">
               <p className="text-sm text-slate-400">Domains</p>
-              <p className="text-3xl font-bold mt-2">{quiz.domains.length}</p>
-            </div>
-            <div className="bg-orange-500/20 border border-orange-500 rounded-lg p-4">
+              <p className="text-3xl md:text-4xl font-bold mt-2">{quiz.domains.length}</p>
+            </Card>
+            <Card variant="warning">
               <p className="text-sm text-slate-400">Buzzer Questions</p>
-              <p className="text-3xl font-bold mt-2">{quiz.buzzerQuestions?.length || 0}</p>
-            </div>
+              <p className="text-3xl md:text-4xl font-bold mt-2">{quiz.buzzerQuestions?.length || 0}</p>
+            </Card>
           </div>
-        </div>
+        </Card>
 
         {/* Leaderboard */}
         {quiz.teams.length > 0 && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-            <h2 className="text-xl font-bold mb-4">🏆 Leaderboard</h2>
-            <div className="space-y-2">
+          <Card>
+            <div className="flex items-center gap-3 mb-6">
+              <Trophy className="w-6 h-6 text-amber-400" />
+              <h2 className="text-2xl font-bold">Leaderboard</h2>
+            </div>
+            <div className="space-y-3">
               {[...quiz.teams]
                 .sort((a: any, b: any) => b.score - a.score)
                 .map((team: any, index: number) => (
-                  <div 
-                    key={team.id} 
-                    className={`flex items-center justify-between p-4 rounded-lg ${
-                      index === 0 ? 'bg-yellow-500/20 border border-yellow-500' :
-                      index === 1 ? 'bg-slate-400/20 border border-slate-400' :
-                      index === 2 ? 'bg-orange-500/20 border border-orange-500' :
-                      'bg-slate-800/50'
-                    }`}
+                  <Card
+                    key={team.id}
+                    variant={index === 0 ? 'warning' : index === 1 || index === 2 ? 'elevated' : 'default'}
+                    className={
+                      index === 0 ? 'border-2 border-amber-500' :
+                      index === 1 ? 'border-2 border-slate-400' :
+                      index === 2 ? 'border-2 border-orange-500' :
+                      ''
+                    }
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="text-2xl font-bold w-8">
-                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="text-3xl font-bold w-12 text-center">
+                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+                        </div>
+                        <div>
+                          <div className="font-bold text-xl">{team.name}</div>
+                          {team.captainName && (
+                            <div className="text-sm text-slate-400">{team.captainName}</div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-bold text-lg">{team.name}</div>
-                        {team.captainName && (
-                          <div className="text-sm text-slate-400">{team.captainName}</div>
-                        )}
-                      </div>
+                      <div className="text-3xl font-bold">{team.score}</div>
                     </div>
-                    <div className="text-2xl font-bold">{team.score}</div>
-                  </div>
+                  </Card>
                 ))}
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>

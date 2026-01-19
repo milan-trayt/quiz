@@ -3,9 +3,14 @@
 import { Clock, CheckCircle, XCircle, Award, Pause, Zap, Trophy, Timer, AlertCircle, Info, Users } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import * as React from 'react';
-import { createTeam, joinTeam, selectDomain, selectQuestion, submitDomainAnswer, showOptions, passQuestion, buzz, submitBuzzerAnswer } from '@/lib/actions';
+import { joinTeam, selectDomain, selectQuestion, submitDomainAnswer, showOptions, passQuestion, buzz, submitBuzzerAnswer } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
 import { useSocket } from '@/hooks/useSocket';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Input, { Select, Textarea } from '@/components/ui/Input';
+import Badge from '@/components/ui/Badge';
+import EmptyState from '@/components/ui/EmptyState';
 
 export default function TeamInterface({ quiz }: { quiz: any }) {
   const { socket, isConnected, hasReconnected } = useSocket(quiz.id);
@@ -324,41 +329,41 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
   if (!joined) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-8">
-          <h1 className="text-3xl font-bold mb-6 text-center">Join Team</h1>
+        <Card className="max-w-md w-full">
+          <div className="text-center mb-6">
+            <Users className="w-16 h-16 mx-auto mb-4 text-indigo-400" />
+            <h1 className="text-3xl md:text-4xl font-bold">Join Team</h1>
+            <p className="text-slate-400 mt-2">Select your team and enter your name</p>
+          </div>
           <form onSubmit={handleJoinTeam} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Select Team</label>
-                <select
-                  value={selectedTeam}
-                  onChange={(e) => setSelectedTeam(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:outline-none focus:border-emerald-500 transition-colors text-white"
-                  required
-                >
-                  <option value="" className="bg-gray-800">Choose a team</option>
-                  {quiz.teams.map((team: any) => (
-                    <option key={team.id} value={team.id} className="bg-gray-800">
-                      {team.name} {team.captainName ? '(Joined)' : '(Available)'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Your Name</label>
-                <input
-                  type="text"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:outline-none focus:border-emerald-500 transition-colors"
-                  placeholder="Enter your name"
-                  required
-                />
-              </div>
-              <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 py-3 rounded-lg font-semibold">
-                Join Team
-              </button>
-            </form>
-        </div>
+            <Select
+              value={selectedTeam}
+              onChange={(e) => setSelectedTeam(e.target.value)}
+              label="Select Team"
+              required
+            >
+              <option value="">Choose a team...</option>
+              {quiz.teams.map((team: any) => (
+                <option key={team.id} value={team.id}>
+                  {team.name} {team.captainName ? '(Joined)' : '(Available)'}
+                </option>
+              ))}
+            </Select>
+            
+            <Input
+              type="text"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              label="Your Name"
+              placeholder="Enter your name"
+              required
+            />
+            
+            <Button type="submit" variant="success" size="lg" className="w-full">
+              Join Team
+            </Button>
+          </form>
+        </Card>
       </div>
     );
   }
@@ -370,70 +375,81 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
   const availableDomains = quiz.domains?.filter((d: any) => !quiz.usedDomains?.includes(d.id));
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8">
       {toast && (
-        <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg font-semibold ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'} z-50`}>
+        <div className={`fixed top-4 right-4 px-6 py-4 rounded-lg font-semibold shadow-lg z-50 animate-slide-in ${
+          toast.type === 'success' ? 'bg-emerald-500/90 backdrop-blur-sm' : 'bg-red-500/90 backdrop-blur-sm'
+        }`}>
           {toast.message}
         </div>
       )}
       
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-          <div className="mb-2">
-            <h1 className="text-3xl font-bold">{team?.name}</h1>
+        <Card variant="elevated">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold">{team?.name}</h1>
+              <p className="text-slate-400 mt-1">Captain: {team?.captainName || 'Not joined'}</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-center">
+                <p className="text-sm text-slate-400">Score</p>
+                <p className="text-3xl md:text-4xl font-bold text-indigo-400">{team?.score}</p>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between items-center">
-            <div className="text-xl">Score: {team?.score}</div>
-            <div className="text-sm text-slate-400">Captain: {team?.captainName || 'Not joined'}</div>
-          </div>
-        </div>
+        </Card>
 
         {/* QUIZ COMPLETED */}
         {quiz.status === 'active' && quiz.phase === 'completed' && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
+          <Card variant="success">
             <div className="text-center py-12">
               <div className="text-6xl mb-6">🎉</div>
               <h2 className="text-4xl font-bold mb-4">Quiz Completed!</h2>
-              <p className="text-slate-400 text-lg mb-4">Thank you for participating!</p>
-              <p className="text-purple-300 text-xl">📺 Check the main screen for final results</p>
+              <p className="text-slate-300 text-lg mb-4">Thank you for participating!</p>
+              <Badge variant="info" className="text-lg px-6 py-3">
+                📺 Check the main screen for final results
+              </Badge>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* AWAITING EVALUATION */}
         {quiz.round === 'domain' && quiz.status === 'active' && quiz.phase === 'awaiting_evaluation' && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-            <div className="text-center py-8">
-              <div className="inline-block p-4 bg-purple-500/20 rounded-full mb-4">
+          <Card variant="elevated">
+            <div className="text-center py-12">
+              <div className="inline-block p-4 bg-purple-500/20 rounded-full mb-6">
                 <svg className="w-16 h-16 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold mb-2">⚖️ Host is Evaluating...</h2>
-              <p className="text-slate-400 text-lg">Please wait while the host reviews your answer</p>
-              <p className="text-purple-300 text-sm mt-4">📺 Watch the main screen for the question and options</p>
+              <h2 className="text-3xl font-bold mb-3">⚖️ Host is Evaluating...</h2>
+              <p className="text-slate-400 text-lg mb-4">Please wait while the host reviews your answer</p>
+              <Badge variant="info" className="text-base px-4 py-2">
+                📺 Watch the main screen for the question and options
+              </Badge>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* SHOWING RESULT */}
         {quiz.round === 'domain' && quiz.status === 'active' && quiz.phase === 'showing_result' && quiz.lastDomainAnswer && quiz.lastDomainAnswer.questionCompleted && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
+          <Card variant="elevated">
             <div className="space-y-6">
               {/* Question */}
               <div className="text-center">
-                <h2 className="text-3xl font-bold mb-4">Question</h2>
-                <div className="text-2xl text-white/90 bg-blue-500/20 border border-blue-500 rounded-lg p-6">
-                  {quiz.lastDomainAnswer.questionText}
-                </div>
+                <h2 className="text-2xl md:text-3xl font-bold mb-4">Question</h2>
+                <Card variant="info">
+                  <p className="text-xl md:text-2xl">{quiz.lastDomainAnswer.questionText}</p>
+                </Card>
               </div>
 
               {/* Correct Answer */}
               <div className="text-center">
-                <h3 className="text-2xl font-bold mb-3 text-green-400">Correct Answer</h3>
-                <div className="text-xl text-green-300 bg-green-500/20 border border-green-500 rounded-lg p-4">
-                  {quiz.lastDomainAnswer.correctAnswer}
-                </div>
+                <h3 className="text-xl md:text-2xl font-bold mb-3 text-emerald-400">Correct Answer</h3>
+                <Card variant="success">
+                  <p className="text-lg md:text-xl text-emerald-300">{quiz.lastDomainAnswer.correctAnswer}</p>
+                </Card>
               </div>
 
               {/* All Team Answers */}
@@ -442,33 +458,32 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                   <h3 className="text-xl font-bold mb-4">Team Answers</h3>
                   <div className="space-y-2">
                     {quiz.lastDomainAnswer.allAnswers.map((teamAnswer: any) => (
-                      <div 
+                      <Card
                         key={teamAnswer.teamId}
-                        className={`text-lg ${
-                          teamAnswer.isPassed
-                            ? 'text-red-300'
-                            : teamAnswer.isCorrect 
-                              ? 'text-green-300' 
-                              : 'text-red-300'
-                        }`}
+                        variant={teamAnswer.isCorrect ? 'success' : 'error'}
+                        className="text-left"
                       >
-                        <span className="font-semibold">{teamAnswer.teamName}:</span>
-                        {teamAnswer.isPassed ? (
-                          <span className="ml-2">PASSED</span>
-                        ) : teamAnswer.isTimeout ? (
-                          <span className="ml-2 text-orange-400">TIMEOUT</span>
-                        ) : teamAnswer.answer ? (
-                          <span className="ml-2">"{teamAnswer.answer}"</span>
-                        ) : (
-                          <span className="ml-2">No answer</span>
-                        )}
-                        <span className="ml-2 text-sm opacity-75">
-                          ({teamAnswer.points > 0 ? '+' : ''}{teamAnswer.points} pts)
-                        </span>
-                        {!teamAnswer.wasTabActive && (
-                          <span className="ml-2 text-xs text-yellow-400">⚠ Tab inactive</span>
-                        )}
-                      </div>
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                          <div>
+                            <span className="font-semibold text-lg">{teamAnswer.teamName}:</span>
+                            {teamAnswer.isPassed ? (
+                              <span className="ml-2 text-red-300">PASSED</span>
+                            ) : teamAnswer.isTimeout ? (
+                              <span className="ml-2 text-amber-400">TIMEOUT</span>
+                            ) : teamAnswer.answer ? (
+                              <span className="ml-2">"{teamAnswer.answer}"</span>
+                            ) : (
+                              <span className="ml-2">No answer</span>
+                            )}
+                            {!teamAnswer.wasTabActive && (
+                              <Badge variant="warning" className="ml-2">⚠ Tab inactive</Badge>
+                            )}
+                          </div>
+                          <Badge variant={teamAnswer.points > 0 ? 'success' : 'error'}>
+                            {teamAnswer.points > 0 ? '+' : ''}{teamAnswer.points} pts
+                          </Badge>
+                        </div>
+                      </Card>
                     ))}
                   </div>
                 </div>
@@ -476,29 +491,31 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
 
               {/* Timer */}
               {timeLeft > 0 && (
-                <div className="text-center text-white/70 text-sm">
-                  Next in {timeLeft}s...
+                <div className="text-center">
+                  <Badge variant="info">Next in {timeLeft}s...</Badge>
                 </div>
               )}
             </div>
-          </div>
+          </Card>
         )}
 
         {/* DOMAIN ROUND ENDED */}
         {quiz.round === 'domain' && quiz.status === 'active' && quiz.phase === 'domain_round_ended' && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
+          <Card variant="elevated">
             <div className="text-center py-8">
+              <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
               <h2 className="text-3xl font-bold mb-4">Domain Round Ended!</h2>
               <p className="text-slate-400 text-lg">Waiting for host to start Buzzer Round...</p>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* DOMAIN ROUND - DOMAIN SELECTION */}
         {quiz.round === 'domain' && quiz.status === 'active' && quiz.phase === 'selecting_domain' && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
+          <Card variant="elevated">
             {!isMyTurn ? (
               <div className="text-center py-8">
+                <Clock className="w-16 h-16 mx-auto mb-4 text-indigo-400 animate-pulse" />
                 <h2 className="text-2xl font-bold mb-4">Waiting...</h2>
                 <p className="text-slate-400">
                   {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name} is selecting domain
@@ -506,29 +523,39 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">Select Domain</h2>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <Award className="w-6 h-6 text-indigo-400" />
+                  Select Domain
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {availableDomains?.map((domain: any) => (
-                    <button
+                    <Button
                       key={domain.id}
                       onClick={() => selectDomain(quiz.id, domain.id)}
-                      className="p-6 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold text-lg"
+                      variant="primary"
+                      size="lg"
+                      className="h-auto py-6"
                     >
-                      {domain.name}
-                      <div className="text-sm text-slate-300 mt-2">{domain.questions.filter((q: any) => !q.isAnswered).length} questions</div>
-                    </button>
+                      <div className="text-center">
+                        <div className="font-semibold text-lg">{domain.name}</div>
+                        <div className="text-sm text-slate-300 mt-2">
+                          {domain.questions.filter((q: any) => !q.isAnswered).length} questions
+                        </div>
+                      </div>
+                    </Button>
                   ))}
                 </div>
               </>
             )}
-          </div>
+          </Card>
         )}
 
         {/* DOMAIN ROUND - QUESTION SELECTION */}
         {quiz.round === 'domain' && quiz.status === 'active' && quiz.phase === 'selecting_question' && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
+          <Card variant="elevated">
             {!isMyTurn ? (
               <div className="text-center py-8">
+                <Clock className="w-16 h-16 mx-auto mb-4 text-indigo-400 animate-pulse" />
                 <h2 className="text-2xl font-bold mb-4">Waiting...</h2>
                 <p className="text-slate-400">
                   {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name} is selecting question
@@ -536,45 +563,53 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">Select Question</h2>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <CheckCircle className="w-6 h-6 text-emerald-400" />
+                  Select Question
+                </h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {quiz.domains.find((d: any) => d.id === quiz.selectedDomainId)?.questions.map((q: any) => (
-                    <button
+                    <Button
                       key={q.id}
                       onClick={() => selectQuestion(quiz.id, q.id, selectedTeam)}
                       disabled={q.isAnswered}
-                      className={`p-6 rounded-lg font-bold text-2xl ${
-                        q.isAnswered ? 'bg-gray-600 cursor-not-allowed opacity-50' : 'bg-emerald-600 hover:bg-emerald-700'
-                      }`}
+                      variant={q.isAnswered ? 'secondary' : 'success'}
+                      size="lg"
+                      className="h-20 text-2xl font-bold"
                     >
                       {q.number}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </>
             )}
-          </div>
+          </Card>
         )}
 
         {/* DOMAIN ROUND - ANSWERING */}
         {quiz.round === 'domain' && quiz.status === 'active' && (quiz.phase === 'answering' || quiz.phase === 'answering_with_options') && currentQuestion && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
+          <Card variant="elevated">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Question #{currentQuestion.number}</h2>
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <AlertCircle className="w-6 h-6 text-yellow-400" />
+                Question #{currentQuestion.number}
+              </h2>
               {isMyTurn && timeLeft > 0 && (
-                <div className={`text-3xl font-bold ${timeLeft < 10 ? 'text-red-500' : 'text-green-500'}`}>
+                <Badge variant={timeLeft < 10 ? 'error' : 'success'} className="text-2xl px-4 py-2">
+                  <Clock className="w-5 h-5 inline mr-1" />
                   {timeLeft}s
-                </div>
+                </Badge>
               )}
             </div>
             
             {/* Instruction to look at spectator screen */}
-            <div className="bg-purple-500/20 border border-purple-400 rounded-lg p-4 mb-4 text-center">
-              <p className="text-lg font-semibold text-purple-300">📺 Look at the main screen for the question!</p>
+            <Card variant="info" className="mb-4 text-center">
+              <Info className="w-8 h-8 mx-auto mb-2 text-blue-400" />
+              <p className="text-lg font-semibold">📺 Look at the main screen for the question!</p>
               {currentQuestion.passedFrom && (
-                <p className="text-sm text-yellow-400 mt-2">⚠️ Passed question</p>
+                <Badge variant="warning" className="mt-2">⚠️ Passed question</Badge>
               )}
-            </div>
+            </Card>
             
             <form onSubmit={async (e) => {
               e.preventDefault();
@@ -605,17 +640,16 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
               {/* Show text input only when options are NOT shown */}
               {quiz.phase !== 'answering_with_options' && (
                 <>
-                  <textarea
+                  <Textarea
                     value={answer}
                     onChange={(e) => setAnswer(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:outline-none focus:border-emerald-500 transition-colors"
                     placeholder={isMyTurn ? "Type your answer..." : "Type your answer (wait for your turn to submit)..."}
                     rows={4}
                   />
                   {!isMyTurn && (
-                    <div className="text-center text-sm text-yellow-400">
+                    <Badge variant="warning" className="w-full text-center py-2">
                       Waiting for {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name} to answer...
-                    </div>
+                    </Badge>
                   )}
                 </>
               )}
@@ -623,15 +657,15 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
               {/* Show option buttons when options are shown */}
               {quiz.phase === 'answering_with_options' && currentQuestion.options.length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-lg font-semibold text-center text-white">Select your answer:</p>
+                  <p className="text-lg font-semibold text-center">Select your answer:</p>
                   {!isMyTurn && (
-                    <div className="text-center text-sm text-yellow-400 mb-2">
+                    <Badge variant="warning" className="w-full text-center py-2 mb-2">
                       Waiting for {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name} to answer...
-                    </div>
+                    </Badge>
                   )}
                   <div className="grid grid-cols-2 gap-4">
                     {currentQuestion.options.map((opt: string, i: number) => (
-                      <button
+                      <Button
                         key={i}
                         type="button"
                         disabled={!isMyTurn || isSubmitting}
@@ -658,10 +692,12 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                             setIsSubmitting(false);
                           }
                         }}
-                        className="py-8 bg-slate-800/50 hover:bg-green-600 rounded-lg text-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-4xl font-bold"
+                        variant="success"
+                        size="lg"
+                        className="h-24 text-4xl font-bold"
                       >
                         {String.fromCharCode(65 + i)}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -671,7 +707,7 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
               {quiz.phase !== 'answering_with_options' && (
                 <div className="flex gap-4">
                   {!currentQuestion.optionsViewed && !currentQuestion.optionsDefault && (
-                    <button
+                    <Button
                       type="button"
                       disabled={!isMyTurn}
                       onClick={async () => {
@@ -680,97 +716,117 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                           setToast({ message: 'Question passed', type: 'success' });
                         }
                       }}
-                      className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      variant="warning"
+                      className="flex-1"
                     >
                       Pass
-                    </button>
+                    </Button>
                   )}
                   {currentQuestion.options.length > 0 && !currentQuestion.optionsViewed && !currentQuestion.optionsDefault && (
-                    <button
+                    <Button
                       type="button"
                       disabled={!isMyTurn}
                       onClick={() => showOptions(quiz.id, currentQuestion.id)}
-                      className="flex-1 py-3 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      variant="warning"
+                      className="flex-1"
                     >
                       Show Options (5/-5)
-                    </button>
+                    </Button>
                   )}
-                  <button type="submit" disabled={!isMyTurn || isSubmitting} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
-                    {isSubmitting ? 'Submitting...' : 
-                      currentQuestion.optionsDefault ? 'Submit (10/-5)' : 'Submit (10)'
-                    }
-                  </button>
+                  <Button 
+                    type="submit" 
+                    disabled={!isMyTurn || isSubmitting} 
+                    variant="success"
+                    className="flex-1"
+                    loading={isSubmitting}
+                  >
+                    {currentQuestion.optionsDefault ? 'Submit (10/-5)' : 'Submit (10)'}
+                  </Button>
                 </div>
               )}
             </form>
-          </div>
+          </Card>
         )}
 
         {/* QUIZ PAUSED */}
         {quiz.status === 'paused' && (quiz.round === 'domain' || quiz.round === 'buzzer') && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
+          <Card variant="warning">
             <div className="text-center py-8">
+              <Pause className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
               <h2 className="text-3xl font-bold mb-4">Quiz Paused</h2>
               <p className="text-slate-400 text-lg">Waiting for host to resume...</p>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* BUZZER ROUND */}
         {quiz.round === 'buzzer' && quiz.status === 'active' && quiz.phase !== 'completed' && currentQuestion && (
-          <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
+          <Card variant="elevated">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Question #{currentQuestion.number}</h2>
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Zap className="w-6 h-6 text-orange-400" />
+                Question #{currentQuestion.number}
+              </h2>
             </div>
-            <div className="bg-orange-500/20 border border-orange-500 rounded-lg p-4 mb-4">
+            <Card variant="warning" className="mb-4">
               <p className="text-lg">{currentQuestion.text}</p>
-            </div>
+            </Card>
 
             {hasBuzzed && quiz.buzzSequence && quiz.buzzSequence.length > 0 && (
-              <div className="bg-slate-800/50 rounded-lg p-3 mb-4">
+              <Card className="mb-4">
                 <p className="text-sm font-medium mb-2">Buzz Sequence:</p>
                 <div className="flex gap-2 flex-wrap">
                   {quiz.buzzSequence.map((teamId: string, i: number) => (
-                    <span key={i} className="px-3 py-1 bg-blue-600 rounded-full text-sm">
+                    <Badge key={i} variant="info" className="text-base px-4 py-2">
                       {i + 1}. {quiz.teams.find((t: any) => t.id === teamId)?.name}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
             {(quiz.phase === 'buzzing' || quiz.phase === 'answering') && !hasBuzzed && buzzTimeLeft > 0 && (
               <>
-                <div className="text-center mb-2 text-yellow-400 font-semibold">
+                <Badge variant="warning" className="w-full text-center text-xl py-3 mb-4">
+                  <Clock className="w-5 h-5 inline mr-2" />
                   Buzz Time: {buzzTimeLeft}s
-                </div>
-                <button
+                </Badge>
+                <Button
                   onClick={() => buzz(quiz.id, selectedTeam)}
-                  className="w-full py-6 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-2xl"
+                  variant="danger"
+                  size="lg"
+                  className="w-full h-24 text-3xl font-bold"
                 >
+                  <Zap className="w-8 h-8 inline mr-2" />
                   BUZZ!
-                </button>
+                </Button>
               </>
             )}
             
             {(quiz.phase === 'buzzing' || quiz.phase === 'answering') && !hasBuzzed && buzzTimeLeft === 0 && (
-              <div className="text-center py-4 text-slate-500">
-                Buzz time expired
-              </div>
+              <EmptyState
+                icon={<Clock className="w-16 h-16" />}
+                title="Buzz time expired"
+                description="You didn't buzz in time for this question"
+              />
             )}
 
             {quiz.phase === 'showing_answer' && (
               <>
-                <div className="bg-blue-500/20 border border-blue-500 rounded-lg p-6 text-center mb-4">
+                <Card variant="info" className="text-center mb-4">
                   <h3 className="text-xl font-bold mb-2">Correct Answer:</h3>
-                  <p className="text-2xl font-bold text-green-400">{currentQuestion.answer}</p>
-                  <p className="text-sm text-slate-400 mt-4">Next question in {timeLeft}s...</p>
-                </div>
+                  <p className="text-2xl font-bold text-emerald-400">{currentQuestion.answer}</p>
+                  {timeLeft > 0 && (
+                    <Badge variant="info" className="mt-4">
+                      Next question in {timeLeft}s...
+                    </Badge>
+                  )}
+                </Card>
                 
                 
                 {/* Round Results */}
                 {quiz.lastRoundResults && Object.keys(quiz.lastRoundResults).length > 0 && (
-                  <div className="bg-slate-800/50 rounded-lg p-4 mb-4">
+                  <Card>
                     <h3 className="text-lg font-bold mb-3 text-center">Round Results</h3>
                     <div className="space-y-2">
                       {Object.entries(quiz.lastRoundResults).map(([teamId, result]: [string, any], i: number) => {
@@ -778,36 +834,38 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                         
                         let points = result.points || 0;
                         let status = 'No Answer';
-                        let statusColor = 'text-slate-500';
+                        let badgeVariant: 'success' | 'warning' | 'error' | 'neutral' = 'neutral';
                         
                         if (result.timeout) {
-                          status = ' Timeout';
-                          statusColor = 'text-yellow-400';
+                          status = '⏱ Timeout';
+                          badgeVariant = 'warning';
                         } else if (result.isCorrect) {
-                          status = ' Correct';
-                          statusColor = 'text-green-400';
+                          status = '✓ Correct';
+                          badgeVariant = 'success';
                         } else if (result.answer) {
-                          status = ' Wrong';
-                          statusColor = 'text-red-400';
+                          status = '✗ Wrong';
+                          badgeVariant = 'error';
                         }
                         
                         return (
-                          <div key={teamId} className="flex justify-between items-center bg-slate-900/30 rounded p-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-slate-500">#{i + 1}</span>
-                              <span className="font-semibold">{team?.name}</span>
+                          <Card key={teamId} variant={result.isCorrect ? 'success' : result.timeout ? 'warning' : 'error'}>
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="neutral" className="text-sm">#{i + 1}</Badge>
+                                <span className="font-semibold">{team?.name}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <Badge variant={badgeVariant}>{status}</Badge>
+                                <Badge variant={points >= 0 ? 'success' : 'error'} className="text-lg px-3 py-1">
+                                  {points > 0 ? '+' : ''}{points}
+                                </Badge>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className={`text-sm ${statusColor}`}>{status}</span>
-                              <span className={`font-bold ${points >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                {points > 0 ? '+' : ''}{points}
-                              </span>
-                            </div>
-                          </div>
+                          </Card>
                         );
                       })}
                     </div>
-                  </div>
+                  </Card>
                 )}
               </>
             )}
@@ -837,37 +895,39 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                   setIsSubmitting(false);
                 }
               }} className="space-y-4">
-                <textarea
+                <Textarea
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-slate-900/50 border border-slate-700 focus:outline-none focus:outline-none focus:border-amber-500 transition-colors"
                   placeholder={hasSubmitted ? "Answer submitted!" : "Type your answer..."}
                   rows={4}
                   disabled={hasSubmitted}
                 />
                 {hasSubmitted ? (
-                  <div className="text-center text-sm text-blue-400">
+                  <Badge variant="success" className="w-full text-center py-2">
                     ✓ Answer submitted! Waiting for results...
-                  </div>
+                  </Badge>
                 ) : myAnswerTimeLeft === 0 ? (
-                  <div className="text-center text-sm text-red-400">
+                  <Badge variant="error" className="w-full text-center py-2">
                     ⏰ Time expired! Cannot submit answer.
-                  </div>
+                  </Badge>
                 ) : (
-                  <div className="text-center text-sm text-green-400">
+                  <Badge variant="success" className="w-full text-center py-2">
                     ✓ You buzzed! Submit your answer ({myAnswerTimeLeft}s left)
-                  </div>
+                  </Badge>
                 )}
-                <button 
+                <Button 
                   type="submit"
                   disabled={hasSubmitted || myAnswerTimeLeft === 0 || isSubmitting}
-                  className="w-full py-3 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  variant="warning"
+                  size="lg"
+                  className="w-full"
+                  loading={isSubmitting}
                 >
-                  {isSubmitting ? 'Submitting...' : hasSubmitted ? 'Submitted' : myAnswerTimeLeft === 0 ? 'Timeout' : 'Submit Answer'}
-                </button>
+                  {hasSubmitted ? 'Submitted' : myAnswerTimeLeft === 0 ? 'Timeout' : 'Submit Answer'}
+                </Button>
               </form>
             )}
-          </div>
+          </Card>
         )}
       </div>
     </div>

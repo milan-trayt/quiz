@@ -1,9 +1,12 @@
 'use client';
 
-import { Clock, CheckCircle, XCircle, Award, Pause, Zap, Trophy, Timer, Eye, BookOpen, HelpCircle } from 'lucide-react';
+import { Clock, Award, Trophy, Eye, BookOpen, HelpCircle } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
+import Card from '@/components/ui/Card';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 
 interface Quiz {
   id: string;
@@ -280,12 +283,12 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
       <div className="max-w-7xl mx-auto">
-        <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 mb-6 border border-slate-700/50">
+        <Card variant="elevated" className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2"> Quiz Spectator</h1>
-              <p className="text-white/70">
-                {quiz.round === 'domain' ? ' Domain Round' : quiz.round === 'buzzer' ? ' Buzzer Round' : ' Waiting'}
+              <h1 className="text-3xl font-bold mb-2">🎯 Quiz Spectator</h1>
+              <p className="text-slate-400">
+                {quiz.round === 'domain' ? '📚 Domain Round' : quiz.round === 'buzzer' ? '⚡ Buzzer Round' : '⏳ Waiting'}
                 {quiz.phase && ` • ${quiz.phase.replace(/_/g, ' ')}`}
               </p>
             </div>
@@ -303,27 +306,25 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
                   ))}
                 </select>
               )}
-              <button
+              <Button
                 onClick={() => setCommentaryEnabled(!commentaryEnabled)}
-                className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                  commentaryEnabled 
-                    ? 'bg-green-500 hover:bg-green-600 text-white' 
-                    : 'bg-slate-700 hover:bg-slate-600 text-white/70'
-                }`}
+                variant={commentaryEnabled ? 'success' : 'secondary'}
               >
                 {commentaryEnabled ? '🔊 Commentary ON' : '🔇 Commentary OFF'}
-              </button>
+              </Button>
             </div>
             <div className="text-right">
-              <div className={`inline-block px-4 py-2 rounded-full ${quiz.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`}>
-                <span className="text-white font-semibold">{quiz.status === 'active' ? 'Live' : 'Paused'}</span>
-              </div>
+              <Badge variant={quiz.status === 'active' ? 'success' : 'warning'} className="text-base px-4 py-2">
+                {quiz.status === 'active' ? '🔴 Live' : '⏸ Paused'}
+              </Badge>
               {timeLeft !== null && timeLeft > 0 && (
-                <div className="mt-2 text-2xl font-bold text-white"><Clock className="inline w-6 h-6 mr-1" />{timeLeft}s</div>
+                <div className="mt-2 text-2xl font-bold">
+                  <Clock className="inline w-6 h-6 mr-1" />{timeLeft}s
+                </div>
               )}
             </div>
           </div>
-        </div>
+        </Card>
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
@@ -331,53 +332,49 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
             {quiz.round === 'domain' && quiz.phase === 'selecting_domain' && (
               <div className="space-y-4">
                 {quiz.lastDomainAnswer && quiz.lastDomainAnswer.teamId && quiz.lastDomainAnswer.questionCompleted && (
-                  <div className={`p-4 rounded-xl border-2 ${
-                    quiz.lastDomainAnswer.isCorrect 
-                      ? 'bg-green-500/20 border-green-400' 
-                      : 'bg-red-500/20 border-red-400'
-                  }`}>
-                    <div className="text-white/70 text-sm mb-2">Last Answer:</div>
+                  <Card variant={quiz.lastDomainAnswer.isCorrect ? 'success' : 'error'}>
+                    <div className="text-slate-300 text-sm mb-2">Last Answer:</div>
                     {quiz.lastDomainAnswer.questionText && (
-                      <div className="text-white/80 text-sm mb-2 italic">"{quiz.lastDomainAnswer.questionText}"</div>
+                      <div className="text-slate-200 text-sm mb-2 italic">"{quiz.lastDomainAnswer.questionText}"</div>
                     )}
                     <div className="flex justify-between items-center">
                       <div>
                         {quiz.lastDomainAnswer.isCorrect ? (
                           <>
-                            <span className="text-white font-bold text-lg">
+                            <span className="font-bold text-lg">
                               {quiz.teams.find((t: Team) => t.id === quiz.lastDomainAnswer.teamId)?.name}:
                             </span>
-                            <span className="text-green-300 ml-2 font-semibold">
+                            <span className="text-emerald-300 ml-2 font-semibold">
                               {quiz.lastDomainAnswer.correctAnswer}
                             </span>
                           </>
                         ) : (
-                          <span className="text-green-300 font-semibold">
+                          <span className="text-emerald-300 font-semibold">
                             Correct Answer: {quiz.lastDomainAnswer.correctAnswer}
                           </span>
                         )}
                       </div>
-                      <span className={`font-bold text-xl ${
-                        quiz.lastDomainAnswer.isCorrect ? 'text-green-300' : 'text-red-300'
-                      }`}>
+                      <Badge variant={quiz.lastDomainAnswer.isCorrect ? 'success' : 'error'} className="text-xl px-4 py-2">
                         {quiz.lastDomainAnswer.points > 0 ? '+' : ''}{quiz.lastDomainAnswer.points} pts
-                      </span>
+                      </Badge>
                     </div>
-                  </div>
+                  </Card>
                 )}
-                <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-8 border border-slate-700/50 text-center">
-                  <div className="text-6xl mb-4"><BookOpen className="inline w-16 h-16" /></div>
-                  <h2 className="text-3xl font-bold text-white mb-4">Selecting Domain</h2>
-                  <p className="text-xl text-yellow-400 font-semibold">{currentTeam?.name} is choosing a domain...</p>
+                <Card variant="elevated" className="text-center">
+                  <BookOpen className="w-16 h-16 mx-auto mb-4 text-blue-400" />
+                  <h2 className="text-3xl font-bold mb-4">Selecting Domain</h2>
+                  <Badge variant="warning" className="text-xl px-6 py-3 mb-6">
+                    {currentTeam?.name} is choosing a domain...
+                  </Badge>
                   <div className="grid grid-cols-2 gap-4 mt-6">
                     {quiz.domains.map(domain => (
-                      <div key={domain.id} className="bg-slate-900/30 rounded-xl p-4 border border-slate-700/50">
-                        <div className="text-lg font-semibold text-white">{domain.name}</div>
-                        <div className="text-sm text-white/60">{domain.questions.length} questions</div>
-                      </div>
+                      <Card key={domain.id} variant="interactive">
+                        <div className="text-lg font-semibold">{domain.name}</div>
+                        <Badge variant="info" className="mt-2">{domain.questions.length} questions</Badge>
+                      </Card>
                     ))}
                   </div>
-                </div>
+                </Card>
               </div>
             )}
 
@@ -385,138 +382,135 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
             {quiz.round === 'domain' && quiz.phase === 'selecting_question' && currentDomain && (
               <div className="space-y-4">
                 {quiz.lastDomainAnswer && quiz.lastDomainAnswer.teamId && quiz.lastDomainAnswer.questionCompleted && (
-                  <div className={`p-4 rounded-xl border-2 ${
-                    quiz.lastDomainAnswer.isCorrect 
-                      ? 'bg-green-500/20 border-green-400' 
-                      : 'bg-red-500/20 border-red-400'
-                  }`}>
-                    <div className="text-white/70 text-sm mb-2">Last Answer:</div>
+                  <Card variant={quiz.lastDomainAnswer.isCorrect ? 'success' : 'error'}>
+                    <div className="text-slate-300 text-sm mb-2">Last Answer:</div>
                     {quiz.lastDomainAnswer.questionText && (
-                      <div className="text-white/80 text-sm mb-2 italic">"{quiz.lastDomainAnswer.questionText}"</div>
+                      <div className="text-slate-200 text-sm mb-2 italic">"{quiz.lastDomainAnswer.questionText}"</div>
                     )}
                     <div className="flex justify-between items-center">
                       <div>
                         {quiz.lastDomainAnswer.isCorrect ? (
                           <>
-                            <span className="text-white font-bold text-lg">
+                            <span className="font-bold text-lg">
                               {quiz.teams.find((t: Team) => t.id === quiz.lastDomainAnswer.teamId)?.name}:
                             </span>
-                            <span className="text-green-300 ml-2 font-semibold">
+                            <span className="text-emerald-300 ml-2 font-semibold">
                               {quiz.lastDomainAnswer.correctAnswer}
                             </span>
                           </>
                         ) : (
-                          <span className="text-green-300 font-semibold">
+                          <span className="text-emerald-300 font-semibold">
                             Correct Answer: {quiz.lastDomainAnswer.correctAnswer}
                           </span>
                         )}
                       </div>
-                      <span className={`font-bold text-xl ${
-                        quiz.lastDomainAnswer.isCorrect ? 'text-green-300' : 'text-red-300'
-                      }`}>
+                      <Badge variant={quiz.lastDomainAnswer.isCorrect ? 'success' : 'error'} className="text-xl px-4 py-2">
                         {quiz.lastDomainAnswer.points > 0 ? '+' : ''}{quiz.lastDomainAnswer.points} pts
-                      </span>
+                      </Badge>
                     </div>
-                  </div>
+                  </Card>
                 )}
-                <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-8 border border-slate-700/50 text-center">
-                  <div className="text-6xl mb-4"><HelpCircle className="inline w-16 h-16" /></div>
-                  <h2 className="text-3xl font-bold text-white mb-2">Selecting Question</h2>
-                  <p className="text-lg text-white/70 mb-4">Domain: <span className="text-white font-bold">{currentDomain.name}</span></p>
-                  <p className="text-xl text-yellow-400 font-semibold">{currentTeam?.name} is choosing a question...</p>
+                <Card variant="elevated" className="text-center">
+                  <HelpCircle className="w-16 h-16 mx-auto mb-4 text-purple-400" />
+                  <h2 className="text-3xl font-bold mb-2">Selecting Question</h2>
+                  <p className="text-lg text-slate-400 mb-4">
+                    Domain: <Badge variant="info" className="text-lg px-4 py-2">{currentDomain.name}</Badge>
+                  </p>
+                  <Badge variant="warning" className="text-xl px-6 py-3 mb-6">
+                    {currentTeam?.name} is choosing a question...
+                  </Badge>
                   <div className="grid grid-cols-5 gap-3 mt-6">
                     {currentDomain.questions.map(q => (
                       <div key={q.id} className={`p-4 rounded-lg font-bold text-xl ${
-                        q.isAnswered ? 'bg-gray-600 text-slate-500' : 'bg-blue-500 text-white'
+                        q.isAnswered ? 'bg-slate-600 text-slate-400' : 'bg-blue-500 text-white'
                       }`}>
                         {q.number}
                       </div>
                     ))}
                   </div>
-                </div>
+                </Card>
               </div>
             )}
 
             {/* Domain Round - Answering */}
             {quiz.round === 'domain' && (quiz.phase === 'answering' || quiz.phase === 'answering_with_options') && currentQuestion && (
               <div className="space-y-4">
-                <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
+                <Card variant="elevated">
                   <div className="mb-4 flex justify-between items-center">
                     <div>
-                      <span className="text-white/70">Domain: </span>
-                      <span className="text-white font-bold">{currentDomain?.name}</span>
-                      <span className="text-white/70 ml-4">Question #{currentQuestion.number}</span>
+                      <Badge variant="info" className="mr-2">Domain: {currentDomain?.name}</Badge>
+                      <Badge variant="neutral">Question #{currentQuestion.number}</Badge>
                     </div>
                   </div>
-                  <div className="bg-yellow-500/20 border-2 border-yellow-400 rounded-xl p-4 mb-4">
-                    <div className="text-yellow-400 font-bold text-lg mb-2">Current Turn: {currentTeam?.name}</div>
-                    <div className="text-white/70 text-sm">
+                  <Card variant="warning" className="mb-4">
+                    <div className="font-bold text-lg mb-2">Current Turn: {currentTeam?.name}</div>
+                    <div className="text-slate-300 text-sm">
                       {quiz.phase === 'answering_with_options' ? 'Answering with options shown' : 'Answering without options'}
                     </div>
-                  </div>
-                  <div className="bg-slate-900/30 rounded-xl p-6">
-                    <div className="text-3xl text-white font-bold mb-6">{currentQuestion.text}</div>
+                  </Card>
+                  <Card className="bg-slate-900/50">
+                    <div className="text-3xl font-bold mb-6">{currentQuestion.text}</div>
                     {quiz.phase === 'answering_with_options' && currentQuestion.options.length > 0 && (
                       <div className="grid grid-cols-2 gap-4">
                         {currentQuestion.options.map((option, idx) => (
-                          <div key={idx} className="bg-blue-500/30 border border-blue-400 rounded-lg p-4 text-white font-semibold">
-                            {String.fromCharCode(65 + idx)}. {option}
-                          </div>
+                          <Card key={idx} variant="info">
+                            <span className="font-semibold text-xl">{String.fromCharCode(65 + idx)}.</span> {option}
+                          </Card>
                         ))}
                       </div>
                     )}
-                  </div>
-                </div>
+                  </Card>
+                </Card>
               </div>
             )}
 
             {/* Buzzer Round - Buzzing */}
             {quiz.round === 'buzzer' && quiz.phase === 'buzzing' && currentBuzzerQuestion && (
-              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
-                <div className="bg-slate-900/30 rounded-xl p-6 mb-4">
+              <Card variant="elevated">
+                <Card className="bg-slate-900/50 mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <div className="text-sm text-white/60">Buzzer Question #{currentBuzzerQuestion.number}</div>
-                    <div className="text-sm text-white/60">
+                    <Badge variant="neutral">Buzzer Question #{currentBuzzerQuestion.number}</Badge>
+                    <Badge variant="info">
                       {quiz.buzzerQuestions.filter((q: any) => !q.isAnswered).length} questions remaining
-                    </div>
+                    </Badge>
                   </div>
-                  <div className="text-3xl text-white font-bold mb-4">{currentBuzzerQuestion.text}</div>
-                </div>
-                <div className="bg-orange-500/20 border-2 border-orange-400 rounded-xl p-6 text-center">
-                  <div className="text-2xl text-white font-bold">Waiting for buzzes...</div>
-                </div>
+                  <div className="text-3xl font-bold mb-4">{currentBuzzerQuestion.text}</div>
+                </Card>
+                <Card variant="warning" className="text-center">
+                  <div className="text-2xl font-bold">⏱ Waiting for buzzes...</div>
+                </Card>
                 {quiz.buzzSequence.length > 0 && (
-                  <div className="bg-yellow-500/20 rounded-xl p-4 mt-4">
-                    <div className="text-white font-semibold mb-2">Buzzed:</div>
+                  <Card variant="info" className="mt-4">
+                    <div className="font-semibold mb-2">Buzzed:</div>
                     <div className="flex gap-2 flex-wrap">
                       {quiz.buzzSequence.map((teamId, idx) => {
                         const team = quiz.teams.find(t => t.id === teamId);
                         return (
-                          <div key={idx} className="bg-yellow-500 text-white px-4 py-2 rounded-full font-bold text-lg">
+                          <Badge key={idx} variant="warning" className="text-lg px-4 py-2">
                             {idx + 1}. {team?.name}
-                          </div>
+                          </Badge>
                         );
                       })}
                     </div>
-                  </div>
+                  </Card>
                 )}
-              </div>
+              </Card>
             )}
 
             {/* Buzzer Round - Answering */}
             {quiz.round === 'buzzer' && quiz.phase === 'answering' && currentBuzzerQuestion && (
-              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
-                <div className="bg-slate-900/30 rounded-xl p-6 mb-4">
+              <Card variant="elevated">
+                <Card className="bg-slate-900/50 mb-4">
                   <div className="flex justify-between items-center mb-2">
-                    <div className="text-sm text-white/60">Buzzer Question #{currentBuzzerQuestion.number}</div>
-                    <div className="text-sm text-white/60">
+                    <Badge variant="neutral">Buzzer Question #{currentBuzzerQuestion.number}</Badge>
+                    <Badge variant="info">
                       {quiz.buzzerQuestions.filter((q: any) => !q.isAnswered).length} questions remaining
-                    </div>
+                    </Badge>
                   </div>
-                  <div className="text-3xl text-white font-bold mb-4">{currentBuzzerQuestion.text}</div>
-                </div>
-                <div className="bg-yellow-500/20 border-2 border-yellow-400 rounded-xl p-4 mb-4">
-                  <div className="text-yellow-400 font-bold text-2xl text-center mb-4">
+                  <div className="text-3xl font-bold mb-4">{currentBuzzerQuestion.text}</div>
+                </Card>
+                <Card variant="warning" className="mb-4">
+                  <div className="font-bold text-2xl text-center mb-4">
                     Teams Answering
                   </div>
                   <div className="text-center">
@@ -524,151 +518,146 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
                       {quiz.buzzSequence.map((teamId, idx) => {
                         const team = quiz.teams.find(t => t.id === teamId);
                         return (
-                          <div 
+                          <Badge 
                             key={idx} 
-                            className="px-4 py-2 rounded-full font-bold text-lg bg-yellow-500 text-black animate-pulse"
+                            variant="warning"
+                            className="text-lg px-4 py-2 animate-pulse"
                           >
                             {idx + 1}. {team?.name}
-                          </div>
+                          </Badge>
                         );
                       })}
                     </div>
-                    <div className="text-white/60 text-sm mt-3">
+                    <Badge variant="info" className="mt-3">
                       20 seconds each
-                    </div>
+                    </Badge>
                   </div>
-                </div>
-              </div>
+                </Card>
+              </Card>
             )}
 
             {/* Buzzer Round - Showing Answer */}
             {quiz.round === 'buzzer' && quiz.phase === 'showing_answer' && currentBuzzerQuestion && (
-              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50">
-                <div className="bg-slate-900/30 rounded-xl p-6 mb-4">
-                  <div className="text-sm text-white/60 mb-2">Buzzer Question #{currentBuzzerQuestion.number}</div>
-                  <div className="text-3xl text-white font-bold mb-4">{currentBuzzerQuestion.text}</div>
-                  <div className="bg-green-500/30 border border-green-400 rounded-lg p-4 mt-4">
-                    <div className="text-green-200 font-semibold mb-1">Correct Answer:</div>
-                    <div className="text-white text-xl font-bold">{currentBuzzerQuestion.answer}</div>
-                  </div>
-                </div>
+              <Card variant="elevated">
+                <Card className="bg-slate-900/50 mb-4">
+                  <Badge variant="neutral" className="mb-2">Buzzer Question #{currentBuzzerQuestion.number}</Badge>
+                  <div className="text-3xl font-bold mb-4">{currentBuzzerQuestion.text}</div>
+                  <Card variant="success" className="mt-4">
+                    <div className="text-emerald-300 font-semibold mb-1">Correct Answer:</div>
+                    <div className="text-xl font-bold">{currentBuzzerQuestion.answer}</div>
+                  </Card>
+                </Card>
                 {quiz.lastRoundResults && Object.keys(quiz.lastRoundResults).length > 0 && (
                   <div className="space-y-2">
-                    <div className="text-white font-semibold mb-2">Results:</div>
+                    <div className="font-semibold mb-2">Results:</div>
                     {Object.entries(quiz.lastRoundResults).map(([teamId, result]: [string, any]) => {
                       const team = quiz.teams.find(t => t.id === teamId);
                       return (
-                        <div key={teamId} className={`p-3 rounded-lg ${
-                          result.isCorrect ? 'bg-green-500/20 border border-green-400' : 'bg-red-500/20 border border-red-400'
-                        }`}>
+                        <Card key={teamId} variant={result.isCorrect ? 'success' : 'error'}>
                           <div className="flex justify-between items-center">
-                            <span className="text-white font-semibold">{team?.name}</span>
-                            <span className={`font-bold ${
-                              result.isCorrect ? 'text-green-300' : 'text-red-300'
-                            }`}>
+                            <span className="font-semibold">{team?.name}</span>
+                            <Badge variant={result.isCorrect ? 'success' : 'error'} className="text-lg px-3 py-1">
                               {result.points > 0 ? '+' : ''}{result.points} pts
-                            </span>
+                            </Badge>
                           </div>
-                        </div>
+                        </Card>
                       );
                     })}
                   </div>
                 )}
-              </div>
+              </Card>
             )}
 
             {/* Awaiting Evaluation */}
             {quiz.round === 'domain' && quiz.phase === 'awaiting_evaluation' && (
-              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-12 border border-slate-700/50">
+              <Card variant="elevated">
                 <div className="text-center mb-6">
                   <div className="inline-block p-6 bg-purple-500/20 rounded-full mb-6">
                     <svg className="w-20 h-20 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <h2 className="text-4xl font-bold mb-4 text-white">⚖️ Host is Evaluating...</h2>
+                  <h2 className="text-4xl font-bold mb-4">⚖️ Host is Evaluating...</h2>
                   <p className="text-slate-400 text-xl">Please wait while the host reviews the answer</p>
                 </div>
 
                 {/* Show the question */}
                 {currentQuestion && (
                   <div className="space-y-4 mt-8">
-                    <div className="bg-slate-900/50 rounded-lg p-6">
+                    <Card className="bg-slate-900/50">
                       <p className="text-sm text-slate-400 mb-3">Question:</p>
-                      <p className="text-2xl font-semibold text-white">{currentQuestion.text}</p>
-                    </div>
+                      <p className="text-2xl font-semibold">{currentQuestion.text}</p>
+                    </Card>
 
                     {/* Show options ONLY if they were viewed */}
                     {currentQuestion.optionsViewed && currentQuestion.options && currentQuestion.options.length > 0 && (
-                      <div className="bg-slate-900/50 rounded-lg p-6">
+                      <Card className="bg-slate-900/50">
                         <p className="text-sm text-slate-400 mb-4">Options:</p>
                         <div className="grid grid-cols-2 gap-3">
                           {currentQuestion.options.map((opt: string, idx: number) => (
-                            <div key={idx} className="p-4 bg-slate-800/50 rounded-lg text-left">
+                            <Card key={idx} variant="info">
                               <span className="font-semibold text-blue-400">{String.fromCharCode(65 + idx)}.</span> {opt}
-                            </div>
+                            </Card>
                           ))}
                         </div>
-                      </div>
+                      </Card>
                     )}
                   </div>
                 )}
-              </div>
+              </Card>
             )}
 
             {/* Showing Result */}
             {quiz.round === 'domain' && quiz.phase === 'showing_result' && quiz.lastDomainAnswer && quiz.lastDomainAnswer.questionCompleted && (
-              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-12 border border-slate-700/50">
+              <Card variant="elevated">
                 <div className="space-y-8">
                   {/* Question */}
                   <div className="text-center">
-                    <h2 className="text-4xl font-bold mb-6 text-white">Question</h2>
-                    <div className="text-3xl text-white/90 bg-blue-500/20 border border-blue-500 rounded-xl p-8">
+                    <h2 className="text-4xl font-bold mb-6">Question</h2>
+                    <Card variant="info" className="text-3xl">
                       {quiz.lastDomainAnswer.questionText}
-                    </div>
+                    </Card>
                   </div>
 
                   {/* Correct Answer */}
                   <div className="text-center">
-                    <h3 className="text-3xl font-bold mb-4 text-green-400">Correct Answer</h3>
-                    <div className="text-2xl text-green-300 bg-green-500/20 border border-green-500 rounded-xl p-6">
+                    <h3 className="text-3xl font-bold mb-4 text-emerald-400">Correct Answer</h3>
+                    <Card variant="success" className="text-2xl text-emerald-300">
                       {quiz.lastDomainAnswer.correctAnswer}
-                    </div>
+                    </Card>
                   </div>
 
                   {/* All Team Answers */}
                   {quiz.lastDomainAnswer.allAnswers && quiz.lastDomainAnswer.allAnswers.length > 0 && quiz.lastDomainAnswer.questionCompleted && (
                     <div className="text-center">
-                      <h3 className="text-2xl font-bold mb-6 text-white">Team Answers</h3>
+                      <h3 className="text-2xl font-bold mb-6">Team Answers</h3>
                       <div className="space-y-3">
                         {quiz.lastDomainAnswer.allAnswers.map((teamAnswer: any) => (
-                          <div 
+                          <Card 
                             key={teamAnswer.teamId}
-                            className={`text-xl ${
-                              teamAnswer.isPassed
-                                ? 'text-red-300'
-                                : teamAnswer.isCorrect 
-                                  ? 'text-green-300' 
-                                  : 'text-red-300'
-                            }`}
+                            variant={teamAnswer.isCorrect ? 'success' : 'error'}
                           >
-                            <span className="font-bold">{teamAnswer.teamName}:</span>
-                            {teamAnswer.isPassed ? (
-                              <span className="ml-2">PASSED</span>
-                            ) : teamAnswer.isTimeout ? (
-                              <span className="ml-2 text-orange-400">TIMEOUT</span>
-                            ) : teamAnswer.answer ? (
-                              <span className="ml-2">"{teamAnswer.answer}"</span>
-                            ) : (
-                              <span className="ml-2">No answer</span>
-                            )}
-                            <span className="ml-3 text-lg opacity-75">
-                              ({teamAnswer.points > 0 ? '+' : ''}{teamAnswer.points} pts)
-                            </span>
-                            {!teamAnswer.wasTabActive && (
-                              <span className="ml-3 text-sm text-yellow-400">⚠ Tab inactive</span>
-                            )}
-                          </div>
+                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                              <div className="text-xl">
+                                <span className="font-bold">{teamAnswer.teamName}:</span>
+                                {teamAnswer.isPassed ? (
+                                  <span className="ml-2 text-red-300">PASSED</span>
+                                ) : teamAnswer.isTimeout ? (
+                                  <span className="ml-2 text-amber-400">TIMEOUT</span>
+                                ) : teamAnswer.answer ? (
+                                  <span className="ml-2">"{teamAnswer.answer}"</span>
+                                ) : (
+                                  <span className="ml-2">No answer</span>
+                                )}
+                                {!teamAnswer.wasTabActive && (
+                                  <Badge variant="warning" className="ml-3">⚠ Tab inactive</Badge>
+                                )}
+                              </div>
+                              <Badge variant={teamAnswer.points > 0 ? 'success' : 'error'} className="text-lg px-3 py-1">
+                                ({teamAnswer.points > 0 ? '+' : ''}{teamAnswer.points} pts)
+                              </Badge>
+                            </div>
+                          </Card>
                         ))}
                       </div>
                     </div>
@@ -676,69 +665,83 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
 
                   {/* Timer */}
                   {timeLeft !== null && timeLeft > 0 && (
-                    <div className="text-center text-white/70 text-xl">
-                      Next in {timeLeft}s...
+                    <div className="text-center">
+                      <Badge variant="info" className="text-xl px-6 py-3">
+                        Next in {timeLeft}s...
+                      </Badge>
                     </div>
                   )}
                 </div>
-              </div>
+              </Card>
             )}
 
             {/* Round Ended */}
             {quiz.phase === 'domain_round_ended' && (
-              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-12 text-center border border-slate-700/50">
-                <div className="text-2xl text-white font-semibold">Domain Round Complete!</div>
-              </div>
+              <Card variant="elevated" className="text-center">
+                <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
+                <div className="text-2xl font-semibold">Domain Round Complete!</div>
+              </Card>
             )}
 
             {quiz.phase === 'completed' && (
-              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-12 text-center border border-slate-700/50">
-                <div className="text-3xl text-white font-bold mb-4">Quiz Complete!</div>
-                <div className="text-xl text-yellow-400">Winner: {sortedTeams[0]?.name}</div>
-              </div>
+              <Card variant="success" className="text-center">
+                <Trophy className="w-20 h-20 mx-auto mb-4 text-yellow-400" />
+                <div className="text-3xl font-bold mb-4">🎉 Quiz Complete!</div>
+                <Badge variant="warning" className="text-2xl px-6 py-3">
+                  Winner: {sortedTeams[0]?.name}
+                </Badge>
+              </Card>
             )}
 
             {quiz.status === 'setup' && (
-              <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-12 text-center border border-slate-700/50">
-                <div className="text-6xl mb-4"><Eye className="inline w-16 h-16" /></div>
-                <div className="text-2xl text-white font-semibold">Waiting for quiz to start...</div>
-              </div>
+              <Card variant="elevated" className="text-center">
+                <Eye className="w-16 h-16 mx-auto mb-4 text-indigo-400" />
+                <div className="text-2xl font-semibold">Waiting for quiz to start...</div>
+              </Card>
             )}
           </div>
 
           {/* Leaderboard Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-slate-800/50 backdrop-blur-md rounded-xl p-6 border border-slate-700/50 sticky top-4">
-              <h2 className="text-2xl font-bold text-white mb-4"><Trophy className="inline w-6 h-6 mr-2" />Leaderboard</h2>
+            <Card variant="elevated" className="sticky top-4">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <Trophy className="w-6 h-6 text-yellow-400" />
+                Leaderboard
+              </h2>
               <div className="space-y-3">
                 {sortedTeams.map((team, index) => (
-                  <div
+                  <Card
                     key={team.id}
-                    className={`p-4 rounded-xl ${
-                      team.id === quiz.currentTeamId
-                        ? 'bg-yellow-500/30 border-2 border-yellow-400'
-                        : 'bg-slate-900/30'
-                    }`}
+                    variant={team.id === quiz.currentTeamId ? 'warning' : 'default'}
+                    className={team.id === quiz.currentTeamId ? 'border-2 border-yellow-400' : ''}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <div className={`text-xl font-bold ${
-                        index === 0 ? 'text-yellow-400' :
-                        index === 1 ? 'text-slate-400' :
-                        index === 2 ? 'text-orange-400' :
-                        'text-white/50'
-                      }`}>
-                        <Award className="inline w-5 h-5 mr-1" />#{index + 1}
+                      <div className="flex items-center gap-2">
+                        <Award className={`w-5 h-5 ${
+                          index === 0 ? 'text-yellow-400' :
+                          index === 1 ? 'text-slate-400' :
+                          index === 2 ? 'text-orange-400' :
+                          'text-slate-500'
+                        }`} />
+                        <Badge variant={
+                          index === 0 ? 'warning' :
+                          index === 1 ? 'neutral' :
+                          index === 2 ? 'warning' :
+                          'neutral'
+                        } className="text-lg px-3 py-1">
+                          #{index + 1}
+                        </Badge>
                       </div>
-                      <div className="text-2xl font-bold text-white">{team.score}</div>
+                      <div className="text-2xl font-bold">{team.score}</div>
                     </div>
-                    <div className="text-lg font-bold text-white">{team.name}</div>
+                    <div className="text-lg font-bold">{team.name}</div>
                     {team.captainName && (
-                      <div className="text-xs text-white/60">{team.captainName}</div>
+                      <div className="text-xs text-slate-400">{team.captainName}</div>
                     )}
-                  </div>
+                  </Card>
                 ))}
               </div>
-            </div>
+            </Card>
           </div>
         </div>
       </div>
