@@ -287,7 +287,7 @@ export async function startBuzzerRound(quizId: string) {
       currentQuestionId: firstQuestion?.id,
       buzzSequence: [],
       currentTeamId: null,
-      timerEndsAt: firstQuestion ? new Date(Date.now() + 10000) : null,
+      timerEndsAt: firstQuestion ? new Date(Date.now() + 15000) : null,
       pendingBuzzerAnswers: {},
       buzzTimers: {},
       lastRoundResults: {}

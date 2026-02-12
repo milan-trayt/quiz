@@ -41,7 +41,7 @@ export async function nextBuzzerQuestion(quizId: string) {
       currentQuestionId: nextQuestion?.id || null,
       buzzSequence: [],
       currentTeamId: null,
-      timerEndsAt: nextQuestion ? new Date(Date.now() + 10000) : null,
+      timerEndsAt: nextQuestion ? new Date(Date.now() + 15000) : null,
       pendingBuzzerAnswers: {},
       buzzTimers: {},
       lastRoundResults: {}

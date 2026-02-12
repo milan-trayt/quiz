@@ -155,14 +155,14 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
   useEffect(() => {
     if (quiz.round === 'buzzer' && quiz.phase === 'buzzing' && quiz.currentQuestionId) {
       setBuzzTimerStart(Date.now());
-      setBuzzTimeLeft(10);
+      setBuzzTimeLeft(15);
       setHasSubmitted(false);
       setIsSubmitting(false);
       setAnswer('');
     } else if (quiz.phase === 'answering' && buzzTimerStart) {
       // Keep buzz timer running during answering phase
       const elapsed = Math.floor((Date.now() - buzzTimerStart) / 1000);
-      setBuzzTimeLeft(Math.max(0, 10 - elapsed));
+      setBuzzTimeLeft(Math.max(0, 15 - elapsed));
     } else {
       setBuzzTimerStart(null);
       setBuzzTimeLeft(0);
@@ -199,7 +199,7 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
     if (buzzTimerStart && buzzTimeLeft > 0) {
       const interval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - buzzTimerStart) / 1000);
-        const remaining = Math.max(0, 10 - elapsed);
+        const remaining = Math.max(0, 15 - elapsed);
         setBuzzTimeLeft(remaining);
         
         // Only trigger expiry if still in buzzing phase and no one has buzzed
