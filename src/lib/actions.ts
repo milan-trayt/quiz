@@ -287,7 +287,7 @@ export async function startBuzzerRound(quizId: string) {
       currentQuestionId: firstQuestion?.id,
       buzzSequence: [],
       currentTeamId: null,
-      timerEndsAt: null,
+      timerEndsAt: firstQuestion ? new Date(Date.now() + 10000) : null,
       pendingBuzzerAnswers: {},
       buzzTimers: {},
       lastRoundResults: {}
@@ -694,17 +694,19 @@ export async function passQuestion(quizId: string, questionId: string, teamId: s
   const question = await prisma.question.findUnique({ where: { id: questionId } });
   if (!question || !quiz || question.optionsViewed || question.optionsDefault) return { success: false, error: 'Cannot pass' };
 
-  const attemptedTeams = [...(question.attemptedBy || []), teamId];
+  const attemptedTeams = [...new Set([...(question.attemptedBy || []), teamId])];
   const teamCount = quiz.teams.length;
   let nextAnswerTurnIndex = quiz.answerTurnIndex;
-  let nextTeamId = teamId;
+  let nextTeamId = null;
   let foundNextTeam = false;
   
-  for (let i = 0; i < teamCount; i++) {
-    nextAnswerTurnIndex = (nextAnswerTurnIndex + 1) % teamCount;
-    const candidateTeamId = quiz.teams[nextAnswerTurnIndex]?.id;
-    if (!attemptedTeams.includes(candidateTeamId)) {
+  // Search sequentially from current answerer for next unattempted team
+  for (let i = 1; i <= teamCount; i++) {
+    const candidateIndex = (quiz.answerTurnIndex + i) % teamCount;
+    const candidateTeamId = quiz.teams[candidateIndex]?.id;
+    if (candidateTeamId && !attemptedTeams.includes(candidateTeamId)) {
       nextTeamId = candidateTeamId;
+      nextAnswerTurnIndex = candidateIndex;
       foundNextTeam = true;
       break;
     }
@@ -761,10 +763,28 @@ export async function passQuestion(quizId: string, questionId: string, teamId: s
         } 
       });
     }
-  } else {
+  } else if (foundNextTeam && nextTeamId) {
     // Pass to next team
     await prisma.question.update({ where: { id: questionId }, data: { passedFrom: question.passedFrom || teamId, attemptedBy: { push: teamId } } });
     await prisma.quiz.update({ where: { id: quizId }, data: { currentTeamId: nextTeamId, phase: 'answering', timerEndsAt: new Date(Date.now() + 30000), answerTurnIndex: nextAnswerTurnIndex, lastDomainAnswer: answerResult } });
+  } else {
+    // No next team found - treat as last team
+    answerResult.questionCompleted = true;
+    await prisma.question.update({ where: { id: questionId }, data: { isAnswered: true, correctAnswer: question.answer, attemptedBy: { push: teamId } } });
+    await prisma.quiz.update({ where: { id: quizId }, data: { lastDomainAnswer: answerResult } });
+    
+    const newQuestionsInDomain = quiz.questionsInDomain + 1;
+    const domain = await prisma.domain.findUnique({ where: { id: quiz.selectedDomainId! }, include: { questions: true } });
+    const totalQuestionsForDomain = Math.floor((domain?.questions.length || 0) / teamCount) * teamCount;
+    
+    await prisma.quiz.update({ 
+      where: { id: quizId }, 
+      data: { 
+        phase: 'showing_result', 
+        timerEndsAt: null, 
+        questionsInDomain: newQuestionsInDomain
+      } 
+    });
   }
   
   revalidateQuizPaths(quizId);
@@ -780,21 +800,19 @@ export async function handleTimerExpiry(quizId: string) {
   });
   if (!quiz || (quiz.phase !== 'answering' && quiz.phase !== 'answering_with_options')) return { success: false };
   
-  // NOTE: showing_result and showing_answer phases no longer have timers
-  // They are now controlled manually by the host via nextDomainQuestion() and nextBuzzerQuestion()
+  const question = await prisma.question.findUnique({ 
+    where: { id: quiz.currentQuestionId! } 
+  });
+  if (!question || !quiz.currentTeamId) return { success: false };
   
-  // Handle answering timer expiry (timeout - pass question)
-  if (quiz.phase === 'answering' || quiz.phase === 'answering_with_options') {
-    const question = await prisma.question.findUnique({ 
-      where: { id: quiz.currentQuestionId! } 
-    });
-    if (!question) return { success: false };
-    
-    // Use passQuestion instead of submitDomainAnswer for timeout
-    return passQuestion(quizId, quiz.currentQuestionId!, quiz.currentTeamId!);
+  // If answering without options, treat timeout as a pass
+  if (quiz.phase === 'answering' && !question.optionsViewed && !question.optionsDefault) {
+    return passQuestion(quizId, quiz.currentQuestionId!, quiz.currentTeamId);
   }
   
-  return { success: false };
+  // If answering with options (or optionsDefault), treat timeout as submitting empty answer
+  // This goes to awaiting_evaluation for the host to handle
+  return submitDomainAnswer(quizId, quiz.currentTeamId, quiz.currentQuestionId!, '', question.optionsViewed || question.optionsDefault, true);
 }
 
 export async function submitDomainAnswer(
@@ -816,13 +834,9 @@ export async function submitDomainAnswer(
 
   const actuallyCorrect = answer.toLowerCase().trim() === question.answer.toLowerCase().trim();
   const isCorrect = wasTabActive && actuallyCorrect;
-  const isPassed = question.passedFrom !== null;
-  const teamCount = quiz.teams.length;
   
   // ALWAYS require manual evaluation by host
   const needsManualEvaluation = true; // Host must evaluate all answers
-  
-  let points = 0;
   
   // Store answer result with all team answers
   const existingAnswers = (quiz.lastDomainAnswer as any)?.allAnswers || [];

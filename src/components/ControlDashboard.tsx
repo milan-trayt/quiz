@@ -1,6 +1,6 @@
 'use client';
 
-import { Play, Pause, RotateCcw, Eye, Users, ArrowRight, Check, X, Minus, Trophy, BarChart3 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Eye, Users, ArrowRight, Check, X, Trophy, BarChart3 } from 'lucide-react';
 import { useEffect } from 'react';
 import { startDomainRound, startBuzzerRound, resetQuiz, disconnectTeamCaptain } from '@/lib/actions';
 import { nextBuzzerQuestion, nextDomainQuestion } from '@/lib/manualProgression';
@@ -116,48 +116,41 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
                 </Card>
               </div>
               
-              <div className="grid grid-cols-3 gap-3 md:gap-4">
-                <Button
-                  variant="success"
-                  size="lg"
-                  icon={<Check className="w-5 h-5 md:w-6 md:h-6" />}
-                  onClick={async () => {
-                    await evaluateDomainAnswer(quiz.id, quiz.lastDomainAnswer.teamId, quiz.currentQuestionId, 'correct');
-                    router.refresh();
-                  }}
-                  className="flex-col py-6"
-                >
-                  <span className="text-sm md:text-base">Correct</span>
-                  <span className="text-xs">+10</span>
-                </Button>
-                
-                <Button
-                  variant="warning"
-                  size="lg"
-                  icon={<Minus className="w-5 h-5 md:w-6 md:h-6" />}
-                  onClick={async () => {
-                    await evaluateDomainAnswer(quiz.id, quiz.lastDomainAnswer.teamId, quiz.currentQuestionId, 'partial');
-                    router.refresh();
-                  }}
-                  className="flex-col py-6"
-                >
-                  <span className="text-sm md:text-base">Partial</span>
-                  <span className="text-xs">+5</span>
-                </Button>
-                
-                <Button
-                  variant="danger"
-                  size="lg"
-                  icon={<X className="w-5 h-5 md:w-6 md:h-6" />}
-                  onClick={async () => {
-                    await evaluateDomainAnswer(quiz.id, quiz.lastDomainAnswer.teamId, quiz.currentQuestionId, 'incorrect');
-                    router.refresh();
-                  }}
-                  className="flex-col py-6"
-                >
-                  <span className="text-sm md:text-base">Incorrect</span>
-                  <span className="text-xs">0</span>
-                </Button>
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
+                {(() => {
+                  const withOpts = quiz.lastDomainAnswer.withOptions;
+                  return (
+                    <>
+                      <Button
+                        variant="success"
+                        size="lg"
+                        icon={<Check className="w-5 h-5 md:w-6 md:h-6" />}
+                        onClick={async () => {
+                          await evaluateDomainAnswer(quiz.id, quiz.lastDomainAnswer.teamId, quiz.currentQuestionId, 'correct');
+                          router.refresh();
+                        }}
+                        className="flex-col py-6"
+                      >
+                        <span className="text-sm md:text-base">Correct</span>
+                        <span className="text-xs">{withOpts ? '+5' : '+10'}</span>
+                      </Button>
+                      
+                      <Button
+                        variant="danger"
+                        size="lg"
+                        icon={<X className="w-5 h-5 md:w-6 md:h-6" />}
+                        onClick={async () => {
+                          await evaluateDomainAnswer(quiz.id, quiz.lastDomainAnswer.teamId, quiz.currentQuestionId, 'incorrect');
+                          router.refresh();
+                        }}
+                        className="flex-col py-6"
+                      >
+                        <span className="text-sm md:text-base">Incorrect</span>
+                        <span className="text-xs">{withOpts ? '-5' : '0'}</span>
+                      </Button>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -180,14 +173,15 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
               </Card>
               
               <div className="space-y-3">
-                <p className="text-sm font-medium text-slate-300">Submitted Answers (in buzz order)</p>
+                <p className="text-sm font-medium text-slate-300">Mark each answer (points calculated in buzz order on complete)</p>
                 {quiz.buzzSequence.map((teamId: string, index: number) => {
                   const teamAnswer = quiz.pendingBuzzerAnswers[teamId];
                   const team = quiz.teams.find((t: any) => t.id === teamId);
                   const isFirstBuzzer = index === 0;
+                  const isEvaluated = teamAnswer?.evaluated;
                   
                   return (
-                    <Card key={teamId} variant="interactive">
+                    <Card key={teamId} variant={isEvaluated ? (teamAnswer.evaluation === 'correct' ? 'success' : 'error') : 'interactive'}>
                       <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -195,6 +189,11 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
                             <Badge variant={isFirstBuzzer ? 'warning' : 'neutral'}>
                               {isFirstBuzzer ? '1st Buzzer' : `${index + 1}${index === 1 ? 'nd' : index === 2 ? 'rd' : 'th'}`}
                             </Badge>
+                            {isEvaluated && (
+                              <Badge variant={teamAnswer.evaluation === 'correct' ? 'success' : 'error'}>
+                                {teamAnswer.evaluation === 'correct' ? '✓ Correct' : '✗ Incorrect'}
+                              </Badge>
+                            )}
                           </div>
                           <div className="mt-2">
                             <p className="text-sm text-slate-400">Answer:</p>
@@ -204,7 +203,7 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
                       </div>
                       
                       {teamAnswer && (
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <Button
                             variant="success"
                             size="sm"
@@ -213,22 +212,9 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
                               await evaluateBuzzerAnswer(quiz.id, teamId, 'correct');
                               router.refresh();
                             }}
-                            className="flex-col py-3"
+                            className={`flex-col py-3 ${isEvaluated && teamAnswer.evaluation === 'correct' ? 'ring-2 ring-emerald-400' : ''}`}
                           >
-                            <span className="text-xs">{isFirstBuzzer ? '+10' : '+5'}</span>
-                          </Button>
-                          
-                          <Button
-                            variant="warning"
-                            size="sm"
-                            icon={<Minus className="w-4 h-4" />}
-                            onClick={async () => {
-                              await evaluateBuzzerAnswer(quiz.id, teamId, 'partial');
-                              router.refresh();
-                            }}
-                            className="flex-col py-3"
-                          >
-                            <span className="text-xs">{isFirstBuzzer ? '+5' : '+2'}</span>
+                            <span className="text-xs">Correct</span>
                           </Button>
                           
                           <Button
@@ -239,9 +225,9 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
                               await evaluateBuzzerAnswer(quiz.id, teamId, 'incorrect');
                               router.refresh();
                             }}
-                            className="flex-col py-3"
+                            className={`flex-col py-3 ${isEvaluated && teamAnswer.evaluation === 'incorrect' ? 'ring-2 ring-red-400' : ''}`}
                           >
-                            <span className="text-xs">{isFirstBuzzer ? '-10' : '-5'}</span>
+                            <span className="text-xs">Incorrect</span>
                           </Button>
                         </div>
                       )}
@@ -257,6 +243,10 @@ export default function ControlDashboard({ quiz }: { quiz: any }) {
                   await completeEvaluation(quiz.id);
                   router.refresh();
                 }}
+                disabled={quiz.buzzSequence.some((teamId: string) => {
+                  const a = quiz.pendingBuzzerAnswers[teamId];
+                  return a && !a.evaluated;
+                })}
                 className="w-full"
               >
                 Complete Evaluation & Show Results

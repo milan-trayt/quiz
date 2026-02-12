@@ -549,14 +549,27 @@ export default function SpectatorView({ quiz: initialQuiz }: { quiz: Quiz }) {
                 </Card>
                 {quiz.lastRoundResults && Object.keys(quiz.lastRoundResults).length > 0 && (
                   <div className="space-y-2">
-                    <div className="font-semibold mb-2">Results:</div>
-                    {Object.entries(quiz.lastRoundResults).map(([teamId, result]: [string, any]) => {
+                    <div className="font-semibold mb-2">Results (in buzz order):</div>
+                    {(quiz.lastRoundResults._buzzOrder || quiz.buzzSequence || Object.keys(quiz.lastRoundResults)).filter((k: string) => k !== '_buzzOrder').map((teamId: string) => {
+                      const result = quiz.lastRoundResults[teamId] as any;
+                      if (!result) return null;
                       const team = quiz.teams.find(t => t.id === teamId);
                       return (
-                        <Card key={teamId} variant={result.isCorrect ? 'success' : 'error'}>
+                        <Card key={teamId} variant={result.isCorrect ? 'success' : result.notReached ? 'default' : 'error'}>
                           <div className="flex justify-between items-center">
-                            <span className="font-semibold">{team?.name}</span>
-                            <Badge variant={result.isCorrect ? 'success' : 'error'} className="text-lg px-3 py-1">
+                            <div>
+                              <span className="font-semibold text-lg">{team?.name}:</span>
+                              {result.notReached ? (
+                                <span className="ml-2 text-slate-400">Not reached</span>
+                              ) : result.timeout ? (
+                                <span className="ml-2 text-amber-400">TIMEOUT</span>
+                              ) : result.answer ? (
+                                <span className="ml-2">"{result.answer}"</span>
+                              ) : (
+                                <span className="ml-2 text-slate-400">No answer</span>
+                              )}
+                            </div>
+                            <Badge variant={result.points > 0 ? 'success' : result.points < 0 ? 'error' : 'neutral'} className="text-lg px-3 py-1">
                               {result.points > 0 ? '+' : ''}{result.points} pts
                             </Badge>
                           </div>

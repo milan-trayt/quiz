@@ -424,77 +424,18 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                 </svg>
               </div>
               <h2 className="text-3xl font-bold mb-3">⚖️ Host is Evaluating...</h2>
-              <p className="text-slate-400 text-lg mb-4">Please wait while the host reviews your answer</p>
-              <Badge variant="info" className="text-base px-4 py-2">
-                📺 Watch the main screen for the question and options
-              </Badge>
+              <p className="text-slate-400 text-lg mb-4">Please wait while the host reviews the answer</p>
             </div>
           </Card>
         )}
 
         {/* SHOWING RESULT */}
-        {quiz.round === 'domain' && quiz.status === 'active' && quiz.phase === 'showing_result' && quiz.lastDomainAnswer && quiz.lastDomainAnswer.questionCompleted && (
+        {quiz.round === 'domain' && quiz.status === 'active' && quiz.phase === 'showing_result' && (
           <Card variant="elevated">
-            <div className="space-y-6">
-              {/* Question */}
-              <div className="text-center">
-                <h2 className="text-2xl md:text-3xl font-bold mb-4">Question</h2>
-                <Card variant="info">
-                  <p className="text-xl md:text-2xl">{quiz.lastDomainAnswer.questionText}</p>
-                </Card>
-              </div>
-
-              {/* Correct Answer */}
-              <div className="text-center">
-                <h3 className="text-xl md:text-2xl font-bold mb-3 text-emerald-400">Correct Answer</h3>
-                <Card variant="success">
-                  <p className="text-lg md:text-xl text-emerald-300">{quiz.lastDomainAnswer.correctAnswer}</p>
-                </Card>
-              </div>
-
-              {/* All Team Answers */}
-              {quiz.lastDomainAnswer.allAnswers && quiz.lastDomainAnswer.allAnswers.length > 0 && quiz.lastDomainAnswer.questionCompleted && (
-                <div className="text-center">
-                  <h3 className="text-xl font-bold mb-4">Team Answers</h3>
-                  <div className="space-y-2">
-                    {quiz.lastDomainAnswer.allAnswers.map((teamAnswer: any) => (
-                      <Card
-                        key={teamAnswer.teamId}
-                        variant={teamAnswer.isCorrect ? 'success' : 'error'}
-                        className="text-left"
-                      >
-                        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-                          <div>
-                            <span className="font-semibold text-lg">{teamAnswer.teamName}:</span>
-                            {teamAnswer.isPassed ? (
-                              <span className="ml-2 text-red-300">PASSED</span>
-                            ) : teamAnswer.isTimeout ? (
-                              <span className="ml-2 text-amber-400">TIMEOUT</span>
-                            ) : teamAnswer.answer ? (
-                              <span className="ml-2">"{teamAnswer.answer}"</span>
-                            ) : (
-                              <span className="ml-2">No answer</span>
-                            )}
-                            {!teamAnswer.wasTabActive && (
-                              <Badge variant="warning" className="ml-2">⚠ Tab inactive</Badge>
-                            )}
-                          </div>
-                          <Badge variant={teamAnswer.points > 0 ? 'success' : 'error'}>
-                            {teamAnswer.points > 0 ? '+' : ''}{teamAnswer.points} pts
-                          </Badge>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Timer */}
-              {timeLeft > 0 && (
-                <div className="text-center">
-                  <Badge variant="info">Next in {timeLeft}s...</Badge>
-                </div>
-              )}
+            <div className="text-center py-8">
+              <Clock className="w-16 h-16 mx-auto mb-4 text-indigo-400 animate-pulse" />
+              <h2 className="text-2xl font-bold mb-3">Waiting for next question...</h2>
+              <p className="text-slate-400">The host will advance shortly</p>
             </div>
           </Card>
         )}
@@ -602,15 +543,27 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
               )}
             </div>
             
-            {/* Instruction to look at spectator screen */}
-            <Card variant="info" className="mb-4 text-center">
-              <Info className="w-8 h-8 mx-auto mb-2 text-blue-400" />
-              <p className="text-lg font-semibold">📺 Look at the main screen for the question!</p>
-              {currentQuestion.passedFrom && (
-                <Badge variant="warning" className="mt-2">⚠️ Passed question</Badge>
-              )}
-            </Card>
+            {/* Current turn indicator */}
+            {!isMyTurn ? (
+              <Card variant="info" className="text-center">
+                <Info className="w-8 h-8 mx-auto mb-2 text-blue-400" />
+                <p className="text-lg font-semibold">
+                  {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name} is answering currently
+                </p>
+                {currentQuestion.passedFrom && (
+                  <Badge variant="warning" className="mt-2">⚠️ Passed question</Badge>
+                )}
+              </Card>
+            ) : (
+              <>
+              <Card variant="success" className="mb-4 text-center">
+                <p className="text-lg font-semibold">🎯 It's your turn to answer!</p>
+                {currentQuestion.passedFrom && (
+                  <Badge variant="warning" className="mt-2">⚠️ Passed question</Badge>
+                )}
+              </Card>
             
+            {/* Answer form - only shown when it's your turn */}
             <form onSubmit={async (e) => {
               e.preventDefault();
               if (!isMyTurn || isSubmitting) return;
@@ -639,36 +592,24 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
               
               {/* Show text input only when options are NOT shown */}
               {quiz.phase !== 'answering_with_options' && (
-                <>
-                  <Textarea
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    placeholder={isMyTurn ? "Type your answer..." : "Type your answer (wait for your turn to submit)..."}
-                    rows={4}
-                  />
-                  {!isMyTurn && (
-                    <Badge variant="warning" className="w-full text-center py-2">
-                      Waiting for {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name} to answer...
-                    </Badge>
-                  )}
-                </>
+                <Textarea
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  placeholder="Type your answer..."
+                  rows={4}
+                />
               )}
               
               {/* Show option buttons when options are shown */}
               {quiz.phase === 'answering_with_options' && currentQuestion.options.length > 0 && (
                 <div className="space-y-3">
                   <p className="text-lg font-semibold text-center">Select your answer:</p>
-                  {!isMyTurn && (
-                    <Badge variant="warning" className="w-full text-center py-2 mb-2">
-                      Waiting for {quiz.teams.find((t: any) => t.id === quiz.currentTeamId)?.name} to answer...
-                    </Badge>
-                  )}
                   <div className="grid grid-cols-2 gap-4">
                     {currentQuestion.options.map((opt: string, i: number) => (
                       <Button
                         key={i}
                         type="button"
-                        disabled={!isMyTurn || isSubmitting}
+                        disabled={isSubmitting}
                         onClick={async () => {
                           if (isSubmitting) return;
                           setIsSubmitting(true);
@@ -709,7 +650,7 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                   {!currentQuestion.optionsViewed && !currentQuestion.optionsDefault && (
                     <Button
                       type="button"
-                      disabled={!isMyTurn}
+                      disabled={isSubmitting}
                       onClick={async () => {
                         const result = await passQuestion(quiz.id, currentQuestion.id, selectedTeam);
                         if (result.success) {
@@ -725,7 +666,7 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                   {currentQuestion.options.length > 0 && !currentQuestion.optionsViewed && !currentQuestion.optionsDefault && (
                     <Button
                       type="button"
-                      disabled={!isMyTurn}
+                      disabled={isSubmitting}
                       onClick={() => showOptions(quiz.id, currentQuestion.id)}
                       variant="warning"
                       className="flex-1"
@@ -735,7 +676,7 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                   )}
                   <Button 
                     type="submit" 
-                    disabled={!isMyTurn || isSubmitting} 
+                    disabled={isSubmitting} 
                     variant="success"
                     className="flex-1"
                     loading={isSubmitting}
@@ -745,6 +686,8 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                 </div>
               )}
             </form>
+            </>
+            )}
           </Card>
         )}
 
@@ -812,65 +755,14 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
             )}
 
             {quiz.phase === 'showing_answer' && (
-              <>
-                <Card variant="info" className="text-center mb-4">
-                  <h3 className="text-xl font-bold mb-2">Correct Answer:</h3>
-                  <p className="text-2xl font-bold text-emerald-400">{currentQuestion.answer}</p>
-                  {timeLeft > 0 && (
-                    <Badge variant="info" className="mt-4">
-                      Next question in {timeLeft}s...
-                    </Badge>
-                  )}
-                </Card>
-                
-                
-                {/* Round Results */}
-                {quiz.lastRoundResults && Object.keys(quiz.lastRoundResults).length > 0 && (
-                  <Card>
-                    <h3 className="text-lg font-bold mb-3 text-center">Round Results</h3>
-                    <div className="space-y-2">
-                      {Object.entries(quiz.lastRoundResults).map(([teamId, result]: [string, any], i: number) => {
-                        const team = quiz.teams.find((t: any) => t.id === teamId);
-                        
-                        let points = result.points || 0;
-                        let status = 'No Answer';
-                        let badgeVariant: 'success' | 'warning' | 'error' | 'neutral' = 'neutral';
-                        
-                        if (result.timeout) {
-                          status = '⏱ Timeout';
-                          badgeVariant = 'warning';
-                        } else if (result.isCorrect) {
-                          status = '✓ Correct';
-                          badgeVariant = 'success';
-                        } else if (result.answer) {
-                          status = '✗ Wrong';
-                          badgeVariant = 'error';
-                        }
-                        
-                        return (
-                          <Card key={teamId} variant={result.isCorrect ? 'success' : result.timeout ? 'warning' : 'error'}>
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="neutral" className="text-sm">#{i + 1}</Badge>
-                                <span className="font-semibold">{team?.name}</span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <Badge variant={badgeVariant}>{status}</Badge>
-                                <Badge variant={points >= 0 ? 'success' : 'error'} className="text-lg px-3 py-1">
-                                  {points > 0 ? '+' : ''}{points}
-                                </Badge>
-                              </div>
-                            </div>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </Card>
-                )}
-              </>
+              <Card variant="elevated" className="text-center">
+                <Clock className="w-16 h-16 mx-auto mb-4 text-indigo-400 animate-pulse" />
+                <h2 className="text-2xl font-bold mb-3">Waiting for next question...</h2>
+                <p className="text-slate-400">The host will advance shortly</p>
+              </Card>
             )}
 
-            {hasBuzzed && (
+            {hasBuzzed && (quiz.phase === 'buzzing' || quiz.phase === 'answering') && !hasSubmitted && myAnswerTimeLeft > 0 && (
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 if (hasSubmitted || isSubmitting) return;
@@ -898,34 +790,40 @@ export default function TeamInterface({ quiz }: { quiz: any }) {
                 <Textarea
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
-                  placeholder={hasSubmitted ? "Answer submitted!" : "Type your answer..."}
+                  placeholder="Type your answer..."
                   rows={4}
-                  disabled={hasSubmitted}
                 />
-                {hasSubmitted ? (
-                  <Badge variant="success" className="w-full text-center py-2">
-                    ✓ Answer submitted! Waiting for results...
-                  </Badge>
-                ) : myAnswerTimeLeft === 0 ? (
-                  <Badge variant="error" className="w-full text-center py-2">
-                    ⏰ Time expired! Cannot submit answer.
-                  </Badge>
-                ) : (
-                  <Badge variant="success" className="w-full text-center py-2">
-                    ✓ You buzzed! Submit your answer ({myAnswerTimeLeft}s left)
-                  </Badge>
-                )}
+                <Badge variant="success" className="w-full text-center py-2">
+                  ✓ You buzzed! Submit your answer ({myAnswerTimeLeft}s left)
+                </Badge>
                 <Button 
                   type="submit"
-                  disabled={hasSubmitted || myAnswerTimeLeft === 0 || isSubmitting}
+                  disabled={isSubmitting}
                   variant="warning"
                   size="lg"
                   className="w-full"
                   loading={isSubmitting}
                 >
-                  {hasSubmitted ? 'Submitted' : myAnswerTimeLeft === 0 ? 'Timeout' : 'Submit Answer'}
+                  Submit Answer
                 </Button>
               </form>
+            )}
+
+            {/* Show status after buzzing - submitted or timed out */}
+            {hasBuzzed && (hasSubmitted || myAnswerTimeLeft === 0) && quiz.phase !== 'showing_answer' && (
+              <Card variant="info" className="text-center">
+                {hasSubmitted ? (
+                  <>
+                    <CheckCircle className="w-12 h-12 mx-auto mb-2 text-emerald-400" />
+                    <p className="text-lg font-semibold">Answer submitted! Waiting for results...</p>
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-12 h-12 mx-auto mb-2 text-amber-400" />
+                    <p className="text-lg font-semibold">Time expired</p>
+                  </>
+                )}
+              </Card>
             )}
           </Card>
         )}
